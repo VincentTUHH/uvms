@@ -33,6 +33,7 @@ def generate_launch_description():
         description='used for node namespace',
     )
 
+<<<<<<< HEAD
     control_node = launch_ros.actions.Node(
         package='uvms_kinematic_ctrl',
         executable='uvms_kin_ctrl_node',
@@ -47,6 +48,27 @@ def generate_launch_description():
         ],
         output='screen',
     )
+=======
+
+    # the topic name from joint_vel_cmds had to be changed for the Setup from Niklas
+    # since the hardware interface on the pi was changed to accept arm_vel_commands instead of joint_vel_commands
+    # for the pick and place setup, the remap must not be done, since another node ist started 
+    # that merges joint_vel_cmds and gripper_vel_cmds and publishes those to ar_vel_cmds then
+    control_node = launch_ros.actions.Node(package='uvms_kinematic_ctrl',
+                                           executable='uvms_kin_ctrl_node',
+                                           namespace=vehicle_name,
+                                           parameters=[{'use_sim_time': use_sim_time}
+                                               , bluerov_manipulator_base_tf_path,
+                                                       manipulator_tf_path,
+                                                       config_file_path,
+                                                       manipulator_joint_space_control_config_path,
+                                                       bluerov_pose_control_config_path
+                                                       ],
+                                           output='screen',
+                                        #    remappings=[('joint_vel_cmds', 'arm_vel_cmds'),],
+                                           )
+    
+>>>>>>> 3174e6f (Initial Commit)
 
     return launch.LaunchDescription(
         [use_sim_time_launch_arg, vehicle_name_launch_arg, control_node]

@@ -4,3 +4,13 @@
 *.swp
 **/venv/
 *.idea/
+*/cmake-build-debug
+*/cmake-build-release
+*data/
+*bags/
+*COLCON_IGNORE
+*__pycache__/
+*.asv
+*.pkl
+*.pickle
+.vscode

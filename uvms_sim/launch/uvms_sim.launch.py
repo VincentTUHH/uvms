@@ -72,6 +72,7 @@ def generate_launch_description():
     launch_description = LaunchDescription()
     declare_launch_args(launch_description=launch_description)
 
+<<<<<<< HEAD
     actions = [
         include_gazebo(),
         include_spawn_uvms(),
@@ -83,3 +84,55 @@ def generate_launch_description():
         launch_description.add_action(action)
 
     return launch_description
+=======
+    vehicle_name = 'klopsi00'
+    simulate_kinematics = False
+    use_sim_time = True
+    use_hydro = True
+    # start_gui = True
+
+    start_gazebo = launch.actions.IncludeLaunchDescription(
+        launch.launch_description_sources.PythonLaunchDescriptionSource(
+            str(hippo_sim_path / 'launch/start_gazebo.launch.py'))
+        # launch_arguments={'start_gui': str(start_gui)}.items()    
+            )
+
+    spawn_uvms = launch.actions.IncludeLaunchDescription(
+        launch.launch_description_sources.PythonLaunchDescriptionSource(
+            str(package_path / 'launch/spawn_uvms.launch.py')),
+        launch_arguments={'vehicle_name': vehicle_name,
+                          'use_sim_time': str(use_sim_time),
+                          'simulate_kinematics': str(simulate_kinematics)}.items()
+    )
+
+    spawn_object = launch.actions.IncludeLaunchDescription(
+        launch.launch_description_sources.PythonLaunchDescriptionSource(
+            str(package_path / 'launch/spawn_object.launch.py')),
+        launch_arguments={'object_name': 'toy'}.items()
+    )
+
+    alpha_sim_interface = launch.actions.IncludeLaunchDescription(
+        launch.launch_description_sources.PythonLaunchDescriptionSource(
+            str(alpha_ctrl_path / 'launch/simulation_velocity_control.launch.py')),
+        launch_arguments={
+            'vehicle_name': vehicle_name,
+            'base_tf_file': str(alpha_model_path / 'config/alpha_base_tf_params_bluerov.yaml'),
+            'use_hydro': str(use_hydro),
+            'update_base_ref': str(True),
+            'is_sim': str(use_sim_time)}.items())
+
+    bluerov_estimation = launch_ros.actions.Node(package='hippo_sim',
+                                                 executable='fake_state_estimator',
+                                                 namespace=vehicle_name,
+                                                 parameters=[{'use_sim_time': use_sim_time}],
+                                                 name='bluerov_state_estimator',
+                                                 output='screen')
+
+    return launch.LaunchDescription([
+        start_gazebo,
+        spawn_object,
+        spawn_uvms,
+        alpha_sim_interface,
+        bluerov_estimation
+    ])
+>>>>>>> 3174e6f (Initial Commit)
