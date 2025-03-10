@@ -22,11 +22,14 @@ def generate_launch_description():
         ('config/actuator_mixer_bluerov_advanced.yaml'))
     uvms_kin_ctrl_path = get_package_share_path('uvms_kinematic_ctrl')
     estimation_watchdog_path = str(
-        uvms_kin_ctrl_path / "launch/node_estimation_drift_watchdog.launch.py")
+        uvms_kin_ctrl_path / 'launch/node_estimation_drift_watchdog.launch.py'
+    )
 
     vehicle_name = 'klopsi00'
     use_sim_time = False
     use_hydro = True
+    # offset_distance = 0.1
+    # number_test_rounds = 3
 
     alpha_estimation = launch.actions.IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -99,23 +102,27 @@ def generate_launch_description():
             'use_sim_time': str(use_sim_time)
         }.items())
 
-    state_publisher = launch_ros.actions.Node(
-        package='robot_state_publisher',
-        executable='robot_state_publisher',
-        name='robot_state_publisher',
-        namespace=vehicle_name,
-        output='screen',
-        parameters=[{
-            'use_sim_time':
-            use_sim_time,
-            'robot_description':
-            launch_ros.descriptions.ParameterValue(launch.substitutions.Command(
-                [
-                    'xacro ', tf_tree_model_path, ' ', 'vehicle_name:=',
-                    vehicle_name
-                ]),
-                                                   value_type=str)
-        }])  # pi: 3.14159265359
+    #added  uvms_trajectory_gen since it is in top_sim as well
+    # and I dont want to start it seperately
+    uvms_trajectory_gen = launch.actions.IncludeLaunchDescription(
+        launch.launch_description_sources.PythonLaunchDescriptionSource(
+            str(uvms_trajectory_gen_path / 'launch/traj_gen.launch.py')),
+        launch_arguments={
+            'vehicle_name': vehicle_name,
+            'use_sim_time': str(use_sim_time)}.items()
+    )
+
+    state_publisher = launch_ros.actions.Node(package='robot_state_publisher',
+                                              executable='robot_state_publisher',
+                                              name='robot_state_publisher',
+                                              namespace=vehicle_name,
+                                              output='screen',
+                                              parameters=[{'use_sim_time': use_sim_time,
+                                                           'robot_description': launch_ros.descriptions.ParameterValue(
+                                                               launch.substitutions.Command(
+                                                                   ['xacro ', tf_tree_model_path,
+                                                                    ' ', 'vehicle_name:=', vehicle_name]),
+                                                               value_type=str)}])  # pi: 3.14159265359
 
     launch_path = str(
         get_package_share_path('hippo_common') /
@@ -145,6 +152,32 @@ def generate_launch_description():
             str(uvms_kin_ctrl_path / 'launch/rviz.launch.py')),
         launch_arguments={'use_sim_time': str(use_sim_time)}.items())
 
+    gripper = launch.actions.IncludeLaunchDescription(
+        launch.launch_description_sources.PythonLaunchDescriptionSource(
+            str(alpha_ctrl_path / 'launch/gripper_control.launch.py')),
+        launch_arguments={
+            'vehicle_name': vehicle_name,
+            'use_sim_time': str(use_sim_time)}.items()
+    )
+
+    velocity_command = launch.actions.IncludeLaunchDescription(
+        launch.launch_description_sources.PythonLaunchDescriptionSource(
+            str(alpha_ctrl_path / 'launch/velocity_command.launch.py')),
+        launch_arguments={
+            'vehicle_name': vehicle_name,
+            'use_sim_time': str(use_sim_time)}.items()
+    )
+
+    pick_and_place_planner = launch.actions.IncludeLaunchDescription(
+        launch.launch_description_sources.PythonLaunchDescriptionSource(
+            str(uvms_kin_ctrl_path / 'launch/planner_ctrl.launch.py')),
+        launch_arguments={
+            'vehicle_name': vehicle_name,
+            # 'offset_distance': str(offset_distance),
+            # 'number_test_rounds':str(number_test_rounds)
+            }.items()
+    )
+
     return launch.LaunchDescription([
         alpha_estimation,
         alpha_force_torque_calc,
@@ -153,8 +186,12 @@ def generate_launch_description():
         bluerov_mixer,
         uvms_kinematic_ctrl,
         # estimation_drift_watchdog,
+        uvms_trajectory_gen,
         state_publisher,
         tf_publisher_vehicle,
         uvms_visualization,
-        rviz
+        rviz,
+        # gripper,
+        velocity_command,
+        # pick_and_place_planner
     ])
