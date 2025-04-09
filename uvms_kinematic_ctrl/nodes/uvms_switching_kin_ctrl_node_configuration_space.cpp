@@ -1,4 +1,5 @@
 // Copyright (C) 2023  Niklas Trekel
+// Copyright (C) 2024 Vincent Lenz
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,12 +18,16 @@
 
 namespace uvms_kin_ctrl {
 
+// uvms_switching allows to switch between task priority control
+// and seperate manipulator and bluerob control
+// uvms_kin_ctrl on its own does not support to switch back to seperate
+// control once task priority is active
+
 UVMSSwitchingKinematicConfigurationControl::UVMSSwitchingKinematicConfigurationControl() {}
 
 void UVMSSwitchingKinematicConfigurationControl::initialize(rclcpp::Node *node_ptr) {
   node_ptr_ = node_ptr;
-  initController(); // controller interface für manipulator und auv werden initialisiert
-  // dies sind control interfaces die ausschließlich für nur arm und nur bluerov geschriebven
+  initController(); // controller interface for manipulator and bluerov
   initTimers();
   initSubscriptions();
 }
@@ -43,7 +48,7 @@ void UVMSSwitchingKinematicConfigurationControl::initializeParameterCallbacks() 
 void UVMSSwitchingKinematicConfigurationControl::publishControlCommands(
     const nav_msgs::msg::Odometry &auv_msg,
     const sensor_msgs::msg::JointState &manipulator_msg) {
-  hippo_msgs::msg::VelocityControlTarget out_auv_msg;
+  hippo_control_msgs::msg::VelocityControlTarget out_auv_msg;
   alpha_msgs::msg::JointData out_manipulator_msg;
   if (!got_first_setpoint_) { // || setpoint_timed_out_
     out_manipulator_msg = zeroManipulatorMsg(node_ptr_->now());
@@ -72,7 +77,8 @@ void UVMSSwitchingKinematicConfigurationControl::publishControlCommands(
   manipulator_controller_interface_->update(manipulator_msg_ptr,
                                             out_manipulator_msg);
 
-  auv_vel_cmd_pub_->publish(out_auv_msg); //das sind die /velocity_setpoint, die während initialization für reinen auv control gesendet werden
+  // publish velocity commands for seperate control of manipulator and bluerov
+  auv_vel_cmd_pub_->publish(out_auv_msg); 
   manipulator_cmd_pub_->publish(out_manipulator_msg);
 }
 void UVMSSwitchingKinematicConfigurationControl::initTimers() {
@@ -148,17 +154,12 @@ void UVMSSwitchingKinematicConfigurationControl::onSetpointTarget(
 
   setpoint_timeout_timer_->reset();
 
-  hippo_msgs::msg::ControlTarget auv_setpoint = _msg->auv;
-  hippo_msgs::msg::ControlTarget::SharedPtr auv_setpoint_ptr =
-      std::make_shared<hippo_msgs::msg::ControlTarget>(auv_setpoint);
+  hippo_control_msgs::msg::ControlTarget auv_setpoint = _msg->auv;
+  hippo_control_msgs::msg::ControlTarget::SharedPtr auv_setpoint_ptr =
+      std::make_shared<hippo_control_msgs::msg::ControlTarget>(auv_setpoint);
   std::lock_guard<std::mutex> lock(mutex_);
   auv_position_controller_interface_->setControlTarget(auv_setpoint_ptr);
-  auv_attitude_controller_interface_->setControlTarget(auv_setpoint_ptr);
-  // RCLCPP_INFO(node_ptr_->get_logger(),
-  //               "Position: joint 1 %.2f joint 2 %.2f joint 3 %.2f joint 4 %.2f", _msg->manipulator.position[0], _msg->manipulator.position[1], _msg->manipulator.position[2], _msg->manipulator.position[3]);
-  // RCLCPP_INFO(node_ptr_->get_logger(),
-  //               "Velocity: joint 1 %.2f joint 2 %.2f joint 3 %.2f joint 4 %.2f", _msg->manipulator.velocity[0], _msg->manipulator.velocity[1], _msg->manipulator.velocity[2], _msg->manipulator.velocity[3]);
-  
+  auv_attitude_controller_interface_->setControlTarget(auv_setpoint_ptr);  
   manipulator_controller_interface_->setPositionTarget(
       _msg->manipulator.position);
   manipulator_controller_interface_->setVelocityTarget(

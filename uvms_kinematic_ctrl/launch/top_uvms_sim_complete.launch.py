@@ -19,20 +19,18 @@ def generate_launch_description():
         / ('config/actuator_mixer_bluerov_advanced.yaml')
     )
 
-    alpha_ctrl_path = get_package_share_path('alpha_ctrl')
-
     uvms_kin_ctrl_path = get_package_share_path('uvms_kinematic_ctrl')
     estimation_watchdog_path = str(
         uvms_kin_ctrl_path / 'launch/node_estimation_drift_watchdog.launch.py'
     )
+
+    alpha_ctrl_path = get_package_share_path('alpha_ctrl')
 
     uvms_trajectory_gen_path = get_package_share_path('uvms_trajectory_gen')
 
     vehicle_name = 'klopsi00'
     use_sim_time = True
     use_hydro = True
-    # offset_distance = 0.1
-    # number_test_rounds = 3
 
     alpha_estimation = launch.actions.IncludeLaunchDescription(
         launch.launch_description_sources.PythonLaunchDescriptionSource(
@@ -149,7 +147,14 @@ def generate_launch_description():
         launch_arguments={'use_sim_time': str(use_sim_time)}.items(),
     )
 
-<<<<<<< HEAD
+    velocity_command = launch.actions.IncludeLaunchDescription(
+        launch.launch_description_sources.PythonLaunchDescriptionSource(
+            str(alpha_ctrl_path / 'launch/velocity_command.launch.py')),
+        launch_arguments={
+            'vehicle_name': vehicle_name,
+            'use_sim_time': str(use_sim_time)}.items()
+    )
+
     return launch.LaunchDescription(
         [
             alpha_estimation,
@@ -162,48 +167,6 @@ def generate_launch_description():
             uvms_trajectory_gen,
             uvms_visualization,
             rviz,
+            velocity_command,
         ]
     )
-=======
-    gripper = launch.actions.IncludeLaunchDescription(
-        launch.launch_description_sources.PythonLaunchDescriptionSource(
-            str(alpha_ctrl_path / 'launch/gripper_control.launch.py')),
-        launch_arguments={
-            'vehicle_name': vehicle_name,
-            'use_sim_time': str(use_sim_time)}.items()
-    )
-
-    velocity_command = launch.actions.IncludeLaunchDescription(
-        launch.launch_description_sources.PythonLaunchDescriptionSource(
-            str(alpha_ctrl_path / 'launch/velocity_command.launch.py')),
-        launch_arguments={
-            'vehicle_name': vehicle_name,
-            'use_sim_time': str(use_sim_time)}.items()
-    )
-
-    pick_and_place_planner = launch.actions.IncludeLaunchDescription(
-        launch.launch_description_sources.PythonLaunchDescriptionSource(
-            str(uvms_kin_ctrl_path / 'launch/planner_ctrl.launch.py')),
-        launch_arguments={
-            'vehicle_name': vehicle_name,
-            # 'offset_distance': str(offset_distance),
-            # 'number_test_rounds':str(number_test_rounds)
-            }.items()
-    )
-
-    return launch.LaunchDescription([
-        alpha_estimation,
-        alpha_force_torque_calc,
-        bluerov_acceleration_estimation,
-        bluerov_ctrl,
-        bluerov_mixer,
-        uvms_kinematic_ctrl,
-        estimation_drift_watchdog,
-        uvms_trajectory_gen,
-        uvms_visualization,
-        rviz,
-        gripper,
-        velocity_command,
-        pick_and_place_planner
-    ])
->>>>>>> 3174e6f (Initial Commit)

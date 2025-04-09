@@ -1,4 +1,5 @@
-// Copyright (C) 2023  Niklas Trekel
+// Copyright (C) 2023 Niklas Trekel
+// Copyright (C) 2024 Vincent Lenz
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,7 +19,6 @@
 namespace uvms_traj_gen {
 void UVMSTrajGenStartUp::initialize(rclcpp::Node *node_ptr) {
   node_ptr_ = node_ptr;
-  // added the following three
   first_auv_state_ = false;
   first_manipulator_state_ = false;
   finished_ = false;
@@ -94,10 +94,7 @@ void UVMSTrajGenStartUp::initializeParameters(bool output) {
 
   std::vector<double> start_q;
   if (!ros_param_utils::getParamArray(
-    // the startup joint values are integers indicating by which factor each joint 1-4 is 
-    // performing 360 degree / 2pi rotations
-    // here: 1.0 means joint i start with a 1.0*2pi rotation
-          node_ptr_, start_q, "startup.start_joints", {1.0, 0.5, 0.5, 1.0} )) { // startup by Niklas: {1.0, 0.5, 0.5, 1.0} Vincent {0.0, 0.25, 0.25, 1/3}
+          node_ptr_, start_q, "startup.start_joints", {1.0, 0.5, 0.5, 1.0} )) {
     RCLCPP_ERROR(node_ptr_->get_logger(),
                  "Param startup.start_joints not set!");
 
@@ -112,7 +109,7 @@ void UVMSTrajGenStartUp::initializeParameters(bool output) {
     return;
   }
   for (int i = 0; i < int(param_utils::n_active_joints); i++) {
-    q_des_(i) = M_PI * start_q[i]; //c++ mathematical constant for pi = 3.141... is M_PI
+    q_des_(i) = M_PI * start_q[i];
   }
 
   already_initialized_ = true;
@@ -139,10 +136,7 @@ void UVMSTrajGenStartUp::sendSetpoint() {
     msg.data = *status_ptr_;
     status_pub_ptr_->publish(msg);
   }
-  if ((q_des_ - q_).norm() < start_accuracy_) { 
-    // possible problem, that if manipulator is already in initial configuration, 
-    // the Status would be set to reached_initial_pose immediately 
-    // without governing the auv to its initial pose
+  if ((q_des_ - q_).norm() < start_accuracy_) {
     *status_ptr_ = TrajStatus::reached_initial_pose;
     std_msgs::msg::Int64 msg;
     msg.data = *status_ptr_;
@@ -168,7 +162,7 @@ void UVMSTrajGenStartUp::sendSetpoint() {
     initial_manipulator_traj_.getSetpoint(t, manipulator_setpoint_.q,
                                           manipulator_setpoint_.dq,
                                           manipulator_setpoint_.ddq);
-  } else { //
+  } else {
     manipulator_setpoint_.q = q_;
     manipulator_setpoint_.dq.setZero();
     manipulator_setpoint_.ddq.setZero();
@@ -242,7 +236,6 @@ void UVMSTrajGenStartUp::updateAUVStates(
     msg.data = *status_ptr_;
     status_pub_ptr_->publish(msg);
   }
-  // std::cout << "Called after reset " << std::endl;
 }
 
 }  // namespace uvms_traj_gen

@@ -22,8 +22,6 @@ def generate_launch_description():
     vehicle_name = 'klopsi00'
     use_sim_time = True
     use_hydro = True
-    # offset_distance = 0.1
-    # number_test_rounds = 3
 
     alpha_estimation = launch.actions.IncludeLaunchDescription(
         launch.launch_description_sources.PythonLaunchDescriptionSource(
@@ -85,7 +83,7 @@ def generate_launch_description():
 
     uvms_kinematic_ctrl = launch.actions.IncludeLaunchDescription(
         launch.launch_description_sources.PythonLaunchDescriptionSource(
-            str(uvms_kin_ctrl_path / 'launch/uvms_pap_kin_ctrl.launch.py')),
+            str(uvms_kin_ctrl_path / 'launch/uvms_kin_ctrl.launch.py')),
         launch_arguments={
             'vehicle_name': vehicle_name,
             'use_sim_time': str(use_sim_time)}.items()
@@ -136,10 +134,7 @@ def generate_launch_description():
         launch.launch_description_sources.PythonLaunchDescriptionSource(
             str(uvms_kin_ctrl_path / 'launch/planner_ctrl.launch.py')),
         launch_arguments={
-            'vehicle_name': vehicle_name,
-            # 'offset_distance': str(offset_distance),
-            # 'number_test_rounds':str(number_test_rounds)
-            }.items()
+            'vehicle_name': vehicle_name}.items()
     )
 
     return launch.LaunchDescription([

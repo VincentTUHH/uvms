@@ -47,6 +47,7 @@ void Traj::getStartPose(Eigen::Vector3d &pos, Eigen::Quaterniond &att) {
 }
 
 void SingleDOFVelTraj::initialize(rclcpp::Node *node_ptr, bool output) {
+  (void)output;
   node_ptr_ = node_ptr;
   std::string name_prefix = "single_dof.";
   if (!ros_param_utils::getParam(node_ptr_, idx_, name_prefix + "idx", 1)) {
@@ -246,6 +247,7 @@ void SingleDOFVelTraj::getSetpointMsg(
 }
 
 void SingleDOFSetpoints::initialize(rclcpp::Node *node_ptr, bool output) {
+  (void)output;
   node_ptr_ = node_ptr;
   idx_setpoint_ = 0;
   std::string name_prefix = "single_dof_setpoints.";
@@ -361,6 +363,7 @@ void SingleDOFSetpoints::getSetpointMsg(
 }
 
 void SingleDOFSinusoidal::initialize(rclcpp::Node *node_ptr, bool output) {
+  (void)output;
   node_ptr_ = node_ptr;
   std::string name_prefix = "single_dof_sinusoidal.";
   if (!ros_param_utils::getParam(node_ptr_, idx_, name_prefix + "idx", 1)) {
@@ -490,6 +493,7 @@ void SingleDOFSinusoidal::getSetpointMsg(
 }
 
 void StationKeeping::initialize(rclcpp::Node *node_ptr, bool output) {
+  (void)output;
   node_ptr_ = node_ptr;
   std::string name_prefix = "station_keeping.";
   std::vector<double> start_pos;
@@ -553,6 +557,7 @@ void StationKeeping::getSetpointMsg(
 }
 
 void EightTraj::initialize(rclcpp::Node *node_ptr, bool output) {
+  (void)output;
   node_ptr_ = node_ptr;
   std::string name_prefix = "eight.";
   if (!ros_param_utils::getParam(node_ptr_, a_, name_prefix + "a", 0.1)) {

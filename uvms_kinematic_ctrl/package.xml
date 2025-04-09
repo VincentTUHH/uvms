@@ -10,26 +10,28 @@
     <buildtool_depend>ament_cmake</buildtool_depend>
 
     <depend>rclcpp</depend>
-    <depend>alpha_msgs</depend>
-    <depend>hippo_msgs</depend>
-    <depend>hippo_control_msgs</depend>
-    <depend>hippo_common</depend>
-    <depend>alpha_model</depend>
     <depend>std_msgs</depend>
-    <depend>sensor_msgs</depend>
-    <depend>nav_msgs</depend>
-    <depend>uvms_common</depend>
-    <depend>uvms_msgs</depend>
-    <depend>alpha_ctrl</depend>
-    <depend>bluerov_ctrl</depend>
-<<<<<<< HEAD
-    <depend>pkg-config</depend>
-=======
     <depend>geometry_msgs</depend>
+    <depend>hippo_common</depend>
+    <depend>hippo_control_msgs</depend>
+    <depend>nav_msgs</depend>
+    <depend>hippo_msgs</depend>
+    <depend>alpha_ctrl</depend>
+    <depend>alpha_msgs</depend>
+    <depend>bluerov_ctrl</depend>
+    <depend>uvms_msgs</depend>
+    <depend>uvms_common</depend>
     <depend>uvms_trajectory_gen</depend>
-    <depend>eigen</depend>
     <depend>std_srvs</depend>
->>>>>>> 3174e6f (Initial Commit)
+    
+    <depend>alpha_model</depend>
+    <depend>sensor_msgs</depend>
+    
+    
+    
+    
+    
+    
 
     <test_depend>ament_lint_auto</test_depend>
     <test_depend>ament_lint_common</test_depend>

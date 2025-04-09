@@ -26,6 +26,7 @@
 #include "bluerov_ctrl/position_p_module_interface.hpp"
 #include "hippo_common/tf2_utils.hpp"
 #include "hippo_control_msgs/msg/velocity_control_target.hpp"
+#include "hippo_control_msgs/msg/control_target.hpp"
 #include "uvms_msgs/msg/uvms_control_target.hpp"
 
 namespace uvms_kin_ctrl {

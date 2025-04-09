@@ -1,4 +1,5 @@
 # Copyright (C) 2023  Niklas Trekel
+# Copyright (C) 2024  Vincent Lenz
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,21 +27,20 @@ find_package(ament_cmake REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(alpha_msgs REQUIRED)
-find_package(hippo_msgs REQUIRED)
 find_package(hippo_control_msgs REQUIRED)
 find_package(hippo_common REQUIRED)
-find_package(alpha_model REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(nav_msgs REQUIRED)
-find_package(uvms_common REQUIRED)
-find_package(uvms_msgs REQUIRED)
-find_package(alpha_ctrl REQUIRED)
-find_package(bluerov_ctrl REQUIRED)
-find_package(uvms_trajectory_gen REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(hippo_msgs REQUIRED)
+find_package(alpha_ctrl REQUIRED)
+find_package(alpha_msgs REQUIRED)
+find_package(bluerov_ctrl REQUIRED)
+find_package(uvms_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(uvms_common REQUIRED)
+find_package(uvms_trajectory_gen REQUIRED)
 find_package(std_srvs REQUIRED)
 
 add_library(kin_ctrl
@@ -83,12 +83,19 @@ add_library(uvms_kin_ctrl_configuration_space
         )
 
 ament_target_dependencies(uvms_kin_ctrl_configuration_space
+        geometry_msgs
+        nav_msgs
+        alpha_msgs
+        hippo_control_msgs
         rclcpp
         uvms_msgs
         alpha_ctrl
         bluerov_ctrl
         hippo_common
         )
+
+target_link_libraries(uvms_kin_ctrl_configuration_space
+        Eigen3::Eigen)
 
 add_library(uvms_switching_kin_ctrl_configuration_space
         nodes/uvms_switching_kin_ctrl_node_configuration_space.cpp
@@ -96,38 +103,65 @@ add_library(uvms_switching_kin_ctrl_configuration_space
 
 ament_target_dependencies(uvms_switching_kin_ctrl_configuration_space
         rclcpp
-        uvms_msgs
+        geometry_msgs
+        nav_msgs
         alpha_ctrl
+        alpha_msgs
         bluerov_ctrl
         hippo_common
+        hippo_control_msgs
+        uvms_msgs
         )
+
+target_link_libraries(uvms_switching_kin_ctrl_configuration_space
+        Eigen3::Eigen)
 
 add_executable(uvms_kin_ctrl_node
         nodes/uvms_kin_ctrl_node.cpp)
 
 ament_target_dependencies(uvms_kin_ctrl_node
+        rclcpp
+        std_msgs
+        geometry_msgs
+        nav_msgs
+        sensor_msgs
+        alpha_msgs
+        hippo_common
+        hippo_control_msgs
+        uvms_common
+        uvms_msgs
         )
 target_link_libraries(uvms_kin_ctrl_node
         kin_ctrl_interface
-        uvms_kin_ctrl_configuration_space)
+        uvms_kin_ctrl_configuration_space
+        Eigen3::Eigen)
 
 
 add_executable(uvms_switching_kin_ctrl_node
         nodes/uvms_switching_kin_ctrl_node.cpp)
 
 ament_target_dependencies(uvms_switching_kin_ctrl_node
-        )
+        rclcpp
+        std_msgs
+        sensor_msgs
+        geometry_msgs
+        nav_msgs
+        alpha_msgs
+        hippo_common
+        hippo_control_msgs
+        uvms_common
+        uvms_msgs)
+
 target_link_libraries(uvms_switching_kin_ctrl_node
         kin_ctrl_interface
-        uvms_switching_kin_ctrl_configuration_space)
+        uvms_switching_kin_ctrl_configuration_space
+        Eigen3::Eigen)
 
 add_executable(uvms_planner_node
         nodes/uvms_planner_node.cpp)
 
 ament_target_dependencies(uvms_planner_node
         rclcpp
-        std_msgs
-        Eigen3
         geometry_msgs
         alpha_ctrl
         uvms_trajectory_gen
@@ -138,36 +172,35 @@ ament_target_dependencies(uvms_planner_node
         std_srvs
         )
 
+target_link_libraries(uvms_planner_node
+        Eigen3::Eigen)
+
 add_executable(pap_evaluation_node
         nodes/pap_evaluation_node.cpp)
 
 ament_target_dependencies(pap_evaluation_node
         rclcpp
-        Eigen3
         geometry_msgs
         hippo_msgs
         nav_msgs
         std_msgs
         hippo_common)
 
-# ########
-# target_include_directories(uvms_planner_node PUBLIC
-#   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-#   $<INSTALL_INTERFACE:include>
-#   ${uvms_trajectory_gen_INCLUDE_DIRS}
-# )
-# ###############
-
+target_link_libraries(pap_evaluation_node
+        Eigen3::Eigen)
 
 add_executable(estimation_drift_watchdog_node
         nodes/estimation_drift_watchdog_node.cpp)
 
 ament_target_dependencies(estimation_drift_watchdog_node
         rclcpp
-        nav_msgs
-        hippo_msgs
+        std_msgs
+        geometry_msgs
         hippo_control_msgs
         hippo_common)
+
+target_link_libraries(estimation_drift_watchdog_node
+        Eigen3::Eigen)
 
 install(
         DIRECTORY config launch rviz

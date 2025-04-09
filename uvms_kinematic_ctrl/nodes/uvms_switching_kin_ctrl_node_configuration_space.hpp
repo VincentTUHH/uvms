@@ -1,4 +1,5 @@
 // Copyright (C) 2023  Niklas Trekel
+// Copyright (C) 2024 Vincent Lenz
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -25,7 +26,8 @@
 #include "bluerov_ctrl/attitude_skew_symmetric_p_module_interface.hpp"
 #include "bluerov_ctrl/position_p_module_interface.hpp"
 #include "hippo_common/tf2_utils.hpp"
-#include "hippo_msgs/msg/velocity_control_target.hpp"
+#include "hippo_control_msgs/msg/velocity_control_target.hpp"
+#include "hippo_control_msgs/msg/control_target.hpp"
 #include "uvms_msgs/msg/uvms_control_target.hpp"
 
 namespace uvms_kin_ctrl {
@@ -42,6 +44,10 @@ class UVMSSwitchingKinematicConfigurationControl {
  public:
   UVMSSwitchingKinematicConfigurationControl();
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Functions
+  //////////////////////////////////////////////////////////////////////////////
+
   void setControllerStatusPtr(int *controller_status_ptr) {
     controller_status_ptr_ = controller_status_ptr;
   }
@@ -57,7 +63,7 @@ class UVMSSwitchingKinematicConfigurationControl {
     manipulator_cmd_pub_ = pub;
   }
   void setAUVCmdPublisherPtr(
-      const rclcpp::Publisher<hippo_msgs::msg::VelocityControlTarget>::SharedPtr
+      const rclcpp::Publisher<hippo_control_msgs::msg::VelocityControlTarget>::SharedPtr
           &pub) {
     auv_vel_cmd_pub_ = pub;
   }
@@ -83,7 +89,7 @@ class UVMSSwitchingKinematicConfigurationControl {
   std::mutex mutex_;
 
   //////////////////////////////////////////////////////////////////////////////
-  // ros params
+  // ROS Params
   //////////////////////////////////////////////////////////////////////////////
 
   rclcpp::Node *node_ptr_;
@@ -95,16 +101,22 @@ class UVMSSwitchingKinematicConfigurationControl {
 
   rclcpp::TimerBase::SharedPtr setpoint_timeout_timer_;
 
-  /// Publishers
+  //////////////////////////////////////////////////////////////////////////////
+  // Publishers
+  //////////////////////////////////////////////////////////////////////////////
   rclcpp::Publisher<alpha_msgs::msg::JointData>::SharedPtr manipulator_cmd_pub_;
-  rclcpp::Publisher<hippo_msgs::msg::VelocityControlTarget>::SharedPtr
+  rclcpp::Publisher<hippo_control_msgs::msg::VelocityControlTarget>::SharedPtr
       auv_vel_cmd_pub_;
 
-  /// Subscriptions
+  //////////////////////////////////////////////////////////////////////////////
+  // Subscriptions
+  //////////////////////////////////////////////////////////////////////////////
   rclcpp::Subscription<uvms_msgs::msg::UVMSControlTarget>::SharedPtr
       setpoint_sub_;
 
-  /// controller interfaces
+  //////////////////////////////////////////////////////////////////////////////
+  // Control Interfaces
+  //////////////////////////////////////////////////////////////////////////////
   alpha_ctrl::JointKinematicControlInterface *manipulator_controller_interface_;
   bluerov_ctrl::PosPModuleInterface *auv_position_controller_interface_;
   bluerov_ctrl::AttSkewSymmetricPModuleInterface

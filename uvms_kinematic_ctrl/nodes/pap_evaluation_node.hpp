@@ -15,10 +15,10 @@
 
 #pragma once
 #include <rclcpp/rclcpp.hpp>
-#include <mutex> //part of standard C++ library and directly provided through compiler
-#include <chrono> //part of standard C++ library and directly provided through compiler
+#include <mutex> 
+#include <chrono> 
 #include <eigen3/Eigen/Dense>
-#include <cmath> //part of standard C++ library and directly provided through compiler. For std::sqrt(), std::pow(), std::copysign()
+#include <cmath>
 
 #include <geometry_msgs/msg/point_stamped.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
@@ -28,10 +28,7 @@
 #include "hippo_msgs/msg/float64_stamped.hpp"
 #include "hippo_msgs/msg/vector_error.hpp"
 #include "hippo_msgs/msg/control_target.hpp"
-
 #include "hippo_common/convert.hpp"
-
-
 
 namespace uvms_kin_ctrl {
 using std::placeholders::_1;
@@ -40,7 +37,9 @@ class PaPEvaluationNode : public rclcpp::Node {
  public:
   PaPEvaluationNode();
  private:
+    //////////////////////////////////////////////////////////////////////////////
     // Functions
+    //////////////////////////////////////////////////////////////////////////////
     void initPublishers();
     void declareParams();
     void initTimers();
@@ -52,7 +51,6 @@ class PaPEvaluationNode : public rclcpp::Node {
     void onPoseCylinder(const nav_msgs::msg::Odometry::SharedPtr _msg);
     void onTrajStatus(const std_msgs::msg::Int64::SharedPtr _msg);
     void onPlannerMode(const std_msgs::msg::Int64::SharedPtr _msg);
-
 
     void getFrameZAxis(Eigen::Vector3d& zaxis, const Eigen::Quaterniond& frame_att);
     void getFrameYAxis(Eigen::Vector3d& yaxis, const Eigen::Quaterniond& frame_att);
@@ -66,19 +64,22 @@ class PaPEvaluationNode : public rclcpp::Node {
     void skew(const Eigen::Vector3d &x, Eigen::Matrix3d &x_tilde);
     void publishEvaluation();
 
-
-
-    // Other-------------------------------------------
+    //////////////////////////////////////////////////////////////////////////////
+    // Other
+    //////////////////////////////////////////////////////////////////////////////
     std::mutex mutex_;
     std::mutex traj_queue_mutex;
     std::mutex SM_queue_mutex;
-
-
     std::queue<int> traj_status_queue;
     std::queue<int> SM_queue;
-
     hippo_msgs::msg::Int64Stamped last_SM_change_;
 
+    //R_eef^(eef,perpendicular), where eef is the frame in pose_endeffector topic
+    Eigen::Matrix3d rotation_x_60_{{1.0, 0.0, 0.0},{0.0, 0.5, -std::sqrt(3)/2.0},{0.0, std::sqrt(3)/2.0, 0.5}};
+
+    //////////////////////////////////////////////////////////////////////////////
+    // Output Messages
+    //////////////////////////////////////////////////////////////////////////////
     geometry_msgs::msg::PointStamped msg_eef_pos_;
     geometry_msgs::msg::PointStamped msg_eef_pos_setpoint_;
     geometry_msgs::msg::PointStamped msg_eef_pos_vec_err_;
@@ -91,20 +92,15 @@ class PaPEvaluationNode : public rclcpp::Node {
     hippo_msgs::msg::VectorError msg_gripped_angle_;
     hippo_msgs::msg::Int64Stamped msg_traj_status_;
 
-    //R_eef^(eef,senkrecht), where eef is the frame in pose_endeffector topic
-    Eigen::Matrix3d rotation_x_60_{{1.0, 0.0, 0.0},{0.0, 0.5, -std::sqrt(3)/2.0},{0.0, std::sqrt(3)/2.0, 0.5}};
-
-
-
-
-    // Boolean Varibales ------------------------------
-    // bool trajectory_status_timed_out_{false};
+    //////////////////////////////////////////////////////////////////////////////
+    // Boolean Variables
+    //////////////////////////////////////////////////////////////////////////////
     bool SM_stage_changed_{false};
     bool received_traj_status_{false};
 
-
-
-    // Constant Variables / ros params ----------------
+    //////////////////////////////////////////////////////////////////////////////
+    // Constant Variables / ROS Params
+    //////////////////////////////////////////////////////////////////////////////
     Eigen::Vector3d cylinder_pos_;
     Eigen::Quaterniond cylinder_att_;
     Eigen::Vector3d cylinder_z_axis_;
@@ -121,34 +117,29 @@ class PaPEvaluationNode : public rclcpp::Node {
     Eigen::Vector3d eef_setpoint_pos_;
     Eigen::Quaterniond eef_setpoint_att_;
 
-
-
-
-
-
-    // Timer ------------------------------------------
+    //////////////////////////////////////////////////////////////////////////////
+    // Timer
+    //////////////////////////////////////////////////////////////////////////////
     rclcpp::TimerBase::SharedPtr publish_evaluation_timer_;
 
-
-    // Publisher --------------------------------------
+    //////////////////////////////////////////////////////////////////////////////
+    // Publisher
+    //////////////////////////////////////////////////////////////////////////////
     rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr eef_pos_pub_;
     rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr eef_pos_setpoint_pub_;
     rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr eef_pos_vec_error_pub_;
     rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr eef_att_vec_error_pub_;
-
     rclcpp::Publisher<hippo_msgs::msg::Int64Stamped>::SharedPtr StateMachine_change_pub_;
-
     rclcpp::Publisher<hippo_msgs::msg::Float64Stamped>::SharedPtr eef_pos_error_pub_;
     rclcpp::Publisher<hippo_msgs::msg::Float64Stamped>::SharedPtr eef_att_error_pub_;
-
     rclcpp::Publisher<hippo_msgs::msg::VectorError>::SharedPtr placed_pos_pub_;
     rclcpp::Publisher<hippo_msgs::msg::VectorError>::SharedPtr gripped_pos_pub_;
     rclcpp::Publisher<hippo_msgs::msg::VectorError>::SharedPtr gripped_angle_pub_;
-
     rclcpp::Publisher<hippo_msgs::msg::Int64Stamped>::SharedPtr traj_status_stamped_pub_;
-
   
-    // Subscriber -------------------------------------
+    //////////////////////////////////////////////////////////////////////////////
+    // Subscriber
+    //////////////////////////////////////////////////////////////////////////////
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr eef_pose_sub_;
     rclcpp::Subscription<hippo_msgs::msg::ControlTarget>::SharedPtr eef_traj_sub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr platform_odometry_sub_;

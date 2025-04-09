@@ -79,21 +79,6 @@ void UVMSPlannerNode::declareParams() {
 
   planner_mode_ = PlannerMode::finishing_pick_and_place;
 
-  // later detected by camera and published to topic
-//   object_plane_normal_ = {0.0, 0.0, 1.0};
-
-  // the placement pose should be set to the coordinate frame of the
-  // hole or similar, where the object is suppose to go through / be placed
-  // wenn ich ein Loch in einer Platte hätte, läge die Pose in der Mitte dieses Loches
-//   place_pos_.x() = 1.0;
-//   place_pos_.y() = 1.0;
-//   place_pos_.z() = -1;
-
-//   place_att_.w() = 1;
-//   place_att_.x() = 0;
-//   place_att_.y() = 0;
-//   place_att_.z() = 0;
-
   pose_out_msg_.header.frame_id =
                 hippo_common::tf2_utils::frame_id::kInertialName;
 }

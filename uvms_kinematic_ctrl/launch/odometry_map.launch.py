@@ -1,4 +1,7 @@
-from ament_index_python.packages import get_package_share_path
+# Start px4 bridge to merge visual data with sensor data + EKF2
+# visual_localization/launch/top_localization.launch.py starts px4 bridge
+# among april tag computation nodes
+
 import launch
 import launch_ros
 
@@ -16,10 +19,8 @@ def generate_launch_description():
                                          executable='px4_bridge',
                                          namespace=vehicle_name,
                                          name='px4_bridge',
-                                        #  parameters=[args],
                                          output='screen',
                                          emulate_tty=True,
-                                         # remappings=[('odometry', 'inertial_odometry'),],
                                          )
 
     return launch.LaunchDescription([

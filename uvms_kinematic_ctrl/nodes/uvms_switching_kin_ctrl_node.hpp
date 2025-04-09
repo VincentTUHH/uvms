@@ -1,4 +1,5 @@
 // Copyright (C) 2023  Niklas Trekel
+// Copyright (C) 2024 Vincent Lenz
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -27,9 +28,9 @@
 #include "hippo_common/convert.hpp"
 #include "hippo_common/param_utils.hpp"
 #include "hippo_common/tf2_utils.hpp"
-#include "hippo_msgs/msg/actuator_setpoint.hpp"
-#include "hippo_msgs/msg/control_target.hpp"
-#include "hippo_msgs/msg/velocity_control_target.hpp"
+#include "hippo_control_msgs/msg/actuator_setpoint.hpp"
+#include "hippo_control_msgs/msg/control_target.hpp"
+#include "hippo_control_msgs/msg/velocity_control_target.hpp"
 #include "uvms_common/ros_param_utils.hpp"
 #include "uvms_switching_kin_ctrl_node_configuration_space.hpp"
 #include "uvms_kinematic_ctrl/kin_ctrl_node_interface.hpp"
@@ -42,6 +43,9 @@ class UVMSSwitchingKinematicControlNode : public rclcpp::Node {
  public:
   UVMSSwitchingKinematicControlNode();
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Functions
+  //////////////////////////////////////////////////////////////////////////////
  private:
   void initTimers();
   void initController();
@@ -50,7 +54,7 @@ class UVMSSwitchingKinematicControlNode : public rclcpp::Node {
   void initSubscriptions();
   alpha_msgs::msg::JointData zeroManipulatorMsg(const rclcpp::Time& _stamp);
   void onSetpointTimeout();
-  void onSetpointTarget(const hippo_msgs::msg::ControlTarget::SharedPtr _msg);
+  void onSetpointTarget(const hippo_control_msgs::msg::ControlTarget::SharedPtr _msg);
   void onJointState(const sensor_msgs::msg::JointState::SharedPtr _msg);
   void onOdometry(const nav_msgs::msg::Odometry::SharedPtr _msg);
   void publishControlCmds();
@@ -58,7 +62,7 @@ class UVMSSwitchingKinematicControlNode : public rclcpp::Node {
   std::mutex mutex_;
 
   //////////////////////////////////////////////////////////////////////////////
-  // ros params
+  // ROS Params
   //////////////////////////////////////////////////////////////////////////////
 
   UVMSKinematicControlInterface* controller_interface_;
@@ -78,20 +82,20 @@ class UVMSSwitchingKinematicControlNode : public rclcpp::Node {
   rclcpp::Time last_stamp_;
 
   //////////////////////////////////////////////////////////////////////////////
-  // publishers
+  // Publishers
   //////////////////////////////////////////////////////////////////////////////
   rclcpp::Publisher<alpha_msgs::msg::JointData>::SharedPtr manipulator_cmd_pub_;
-  rclcpp::Publisher<hippo_msgs::msg::VelocityControlTarget>::SharedPtr
+  rclcpp::Publisher<hippo_control_msgs::msg::VelocityControlTarget>::SharedPtr
       auv_vel_cmd_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr eef_pose_pub_;
   //////////////////////////////////////////////////////////////////////////////
-  // subscriptions
+  // Subscriptions
   //////////////////////////////////////////////////////////////////////////////
 
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr
       state_sub_manipulator_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_auv_;
-  rclcpp::Subscription<hippo_msgs::msg::ControlTarget>::SharedPtr eef_traj_sub_;
+  rclcpp::Subscription<hippo_control_msgs::msg::ControlTarget>::SharedPtr eef_traj_sub_;
 
   UVMSSwitchingKinematicConfigurationControl* startup_controller_;
   int controller_status_ = ControllerStatus::undeclared;

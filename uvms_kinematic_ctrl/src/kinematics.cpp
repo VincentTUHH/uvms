@@ -37,12 +37,14 @@ void uvms_kinematics::quaternionError(const Eigen::Quaterniond &des,
 void uvms_kinematics::getTransformationEulerBodyRates(
     const double &r, const double &p, const double &y,
     Eigen::Ref<Eigen::Matrix3d> J) {
+  (void)y;
   J << 1, 0, -sin(p), 0, cos(r), cos(p) * sin(r), 0, -sin(r), cos(p) * cos(r);
 }
 
 void uvms_kinematics::getTransformationBodyRatesEuler(
     const double &r, const double &p, const double &y,
     Eigen::Ref<Eigen::Matrix3d> J) {
+  (void)y;
   J << 1, sin(r) * tan(p), cos(r) * tan(p), 0, cos(r), -sin(r), 0,
       sin(r) / cos(p), cos(r) / cos(p);
 }

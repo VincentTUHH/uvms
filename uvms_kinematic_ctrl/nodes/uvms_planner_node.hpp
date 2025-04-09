@@ -15,12 +15,11 @@
 
 #pragma once
 #include <rclcpp/rclcpp.hpp>
-#include <mutex> //part of standard C++ library and directly provided through compiler
-#include <chrono> //part of standard C++ library and directly provided through compiler
-#include <std_msgs/msg/int64.hpp>
+#include <mutex>
+#include <chrono>
 #include <eigen3/Eigen/Dense>
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <cmath> //part of standard C++ library and directly provided through compiler. For std::sqrt(), std::pow(), std::copysign()
+#include <cmath> 
 #include <nav_msgs/msg/odometry.hpp>
 #include <std_srvs/srv/set_bool.hpp>
 
@@ -56,7 +55,9 @@ class UVMSPlannerNode : public rclcpp::Node {
  public:
   UVMSPlannerNode();
  private:
+    //////////////////////////////////////////////////////////////////////////////
     // Functions
+    //////////////////////////////////////////////////////////////////////////////
     void initPublishers();
     void declareParams();
     void initTimers();
@@ -69,7 +70,6 @@ class UVMSPlannerNode : public rclcpp::Node {
     void onStatusTrajectoryTimeout();
     void onStatusGripperTimeout();
 
-    void onPoseObject(const geometry_msgs::msg::PoseStamped::SharedPtr _msg);
     void onPoseEndeffector(const geometry_msgs::msg::PoseStamped::SharedPtr _msg); 
     void onStatusTrajectory(const std_msgs::msg::Int64::SharedPtr _msg);
     void onStatusGripper(const std_msgs::msg::Int64::SharedPtr _msg);
@@ -77,15 +77,15 @@ class UVMSPlannerNode : public rclcpp::Node {
     void onOdometryPlatform(const nav_msgs::msg::Odometry::SharedPtr _msg);
     void onOdometryCylinderHolder(const nav_msgs::msg::Odometry::SharedPtr _msg);
 
-
     void runPlanner();
 
     void vectorPlaneProjection(const Eigen::Vector3d &_plane_normal, const Eigen::Vector3d &_vector, Eigen::Vector3d &_proj);
     void getRotationFromVector(const Eigen::Vector3d &_x_eff, const Eigen::Vector3d &_z_eff, Eigen::Matrix3d &_rotation);
     void vectorVectorProjection(const Eigen::Vector3d &_base_vector, const Eigen::Vector3d &_vector, Eigen::Vector3d &_proj);
-    Eigen::Quaterniond alignZAxes(const Eigen::Quaterniond& qA, const Eigen::Quaterniond& qB);
 
-    // Other-------------------------------------------
+    //////////////////////////////////////////////////////////////////////////////
+    // Others
+    //////////////////////////////////////////////////////////////////////////////
     std::mutex mutex_;
 
     hippo_msgs::msg::PoseStampedNumbered pose_out_msg_;
@@ -94,7 +94,9 @@ class UVMSPlannerNode : public rclcpp::Node {
     std_msgs::msg::Int64 msg_traj_;
     std_msgs::msg::Int64 msg_planner_;
 
-    // State Variables --------------------------------
+    //////////////////////////////////////////////////////////////////////////////
+    // State Variables
+    //////////////////////////////////////////////////////////////////////////////
     int gripper_status_{alpha_ctrl::GripperStatus::undefined};
     int gripper_mode_{alpha_ctrl::GripperMode::undefined_mode};
 
@@ -106,7 +108,9 @@ class UVMSPlannerNode : public rclcpp::Node {
     int next_planner_mode_{PlannerMode::undefined};
     int next_traj_mode_{uvms_traj_gen::TrajMode::undeclared_mode};
 
-    // Boolean Varibales ------------------------------
+    //////////////////////////////////////////////////////////////////////////////
+    // Boolean Variables
+    //////////////////////////////////////////////////////////////////////////////
     bool trajectory_status_timed_out_{false};
     bool gripper_status_timed_out_{false};
     bool got_first_object_pose_{false};
@@ -120,20 +124,17 @@ class UVMSPlannerNode : public rclcpp::Node {
     bool automated_check_{false};
 
 
-    // Constant Variables / ros params ----------------
+    //////////////////////////////////////////////////////////////////////////////
+    // Constant Variables / ROS Params
+    //////////////////////////////////////////////////////////////////////////////
     double offset_dist_;
-
     double cylinder_height_;
-
     double discharge_height_;
-
     double lift_surface_dist_;
-
     double eps_orthogonal_{0.001};
 
     int number_rounds_;
     int counter_rounds_;
-
     int counter_msg_pose_des_{0};
 
     std::stringstream stream_counter_;
@@ -141,7 +142,7 @@ class UVMSPlannerNode : public rclcpp::Node {
 
     Eigen::Vector3d place_pos_;
     Eigen::Quaterniond place_att_;
-    Eigen::Vector3d place_plane_normal_;//{0.0, 0.0, 1.0}; // in world frame
+    Eigen::Vector3d place_plane_normal_; // in world frame
 
     Eigen::Vector3d cylinder_holder_pos_;
     Eigen::Quaterniond cylinder_holder_att_;
@@ -153,16 +154,13 @@ class UVMSPlannerNode : public rclcpp::Node {
 
     Eigen::Matrix3d rotation_x_60_{{1.0, 0.0, 0.0},{0.0, 0.5, -std::sqrt(3)/2.0},{0.0, std::sqrt(3)/2.0, 0.5}};
 
-    // Eigen::Vector3d lift_surface_dist_{0.0, 0.0, 0.1}; //unit = m
-
     Eigen::Vector3d direction_2_place_;
 
     Eigen::Vector3d eef_offset_obj_new_I_;
 
-    // Message Storage --------------------------------
-    Eigen::Vector3d object_pos_{0.5093, 2.5025, -0.5923129272460937};
+    Eigen::Vector3d object_pos_;
     Eigen::Quaterniond object_att_;
-    Eigen::Vector3d object_plane_normal_{0.0, 0.0, 1.0}; // in world frame
+    Eigen::Vector3d object_plane_normal_; // in world frame
 
     Eigen::Vector3d projection_;
 
@@ -172,26 +170,30 @@ class UVMSPlannerNode : public rclcpp::Node {
     Eigen::Vector3d eef_pos_des_;
     Eigen::Quaterniond eef_att_des_;
 
-    // Timer ------------------------------------------
+    //////////////////////////////////////////////////////////////////////////////
+    // Timer
+    //////////////////////////////////////////////////////////////////////////////
     rclcpp::TimerBase::SharedPtr trajectory_status_timeout_timer_;
     rclcpp::TimerBase::SharedPtr gripper_status_timeout_timer_;
     rclcpp::TimerBase::SharedPtr run_planner_timer_;
 
-    // Publisher --------------------------------------
+    //////////////////////////////////////////////////////////////////////////////
+    // Publisher
+    //////////////////////////////////////////////////////////////////////////////
     rclcpp::Publisher<hippo_msgs::msg::PoseStampedNumbered>::SharedPtr eef_pose_goal_pub_;
     rclcpp::Publisher<std_msgs::msg::Int64>::SharedPtr control_mode_pub_;
     rclcpp::Publisher<std_msgs::msg::Int64>::SharedPtr gripper_mode_pub_;
     rclcpp::Publisher<std_msgs::msg::Int64>::SharedPtr planner_mode_pub_;
   
-    // Subscriber -------------------------------------
-    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr object_pose_sub_;
+    //////////////////////////////////////////////////////////////////////////////
+    // Subscriber
+    //////////////////////////////////////////////////////////////////////////////
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr eef_pose_sub_;
     rclcpp::Subscription<std_msgs::msg::Int64>::SharedPtr traj_status_sub_;
     rclcpp::Subscription<std_msgs::msg::Int64>::SharedPtr gripper_status_sub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr platform_odometry_sub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr cylinder_odometry_sub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr cylinder_holder_odometry_sub_;
-
 
     rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr test_run_service_;
 };

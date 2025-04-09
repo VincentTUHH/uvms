@@ -13,14 +13,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include <gz/msgs/double_v.pb.h>
-
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <geometry_msgs/msg/vector3_stamped.hpp>
-#include <gz/transport/Node.hh>
 #include <hippo_control_msgs/msg/actuator_controls.hpp>
 #include <hippo_control_msgs/msg/thruster_forces.hpp>
 #include <hippo_msgs/msg/esc_rpms.hpp>
+#include <ignition/transport/Node.hh>
 #include <rclcpp/node_interfaces/node_topics.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <ros_gz_bridge/convert.hpp>
@@ -34,9 +32,9 @@ using namespace sensor_msgs::msg;
 using namespace std_msgs::msg;
 using namespace hippo_msgs::msg;
 using namespace hippo_control_msgs::msg;
-using namespace gz;
+using namespace ignition;
 using namespace nav_msgs::msg;
-namespace gz_msgs = gz::msgs;
+namespace gz_msgs = ignition::msgs;
 using std::placeholders::_1;
 
 class Bridge {
@@ -95,7 +93,7 @@ class Bridge {
     }
     clock_pub_ = ros_node_->create_publisher<rosgraph_msgs::msg::Clock>(
         "/clock", rclcpp::SystemDefaultsQoS());
-    std::function<void(const gz::msgs::Clock &)> f =
+    std::function<void(const ignition::msgs::Clock &)> f =
         std::bind(&Bridge::OnClock, this, _1);
     gz_node_->Subscribe("/clock", f);
   }
@@ -185,14 +183,14 @@ class Bridge {
         hippo_control_msgs::msg::VelocityControlTarget>(
         "velocity_setpoint", rclcpp::SystemDefaultsQoS(),
         std::bind(&Bridge::OnVelocityCommand, this, _1));
-    vel_cmd_pub_ = gz_node_->Advertise<gz::msgs::Twist>(
+    vel_cmd_pub_ = gz_node_->Advertise<ignition::msgs::Twist>(
         std::string(ros_node_->get_namespace()) + "/vel_cmds");
   }
 
   void CreateJointAccelerationBridge() {
     joint_accel_pub_ = ros_node_->create_publisher<alpha_msgs::msg::JointData>(
         "joint_accelerations_raw", rclcpp::SystemDefaultsQoS());
-    std::function<void(const gz::msgs::Double_V &)> f =
+    std::function<void(const ignition::msgs::Double_V &)> f =
         std::bind(&Bridge::OnJointAcceleration, this, _1);
     gz_node_->Subscribe(
         std::string(ros_node_->get_namespace()) + "/joint_accelerations", f);
@@ -211,7 +209,7 @@ class Bridge {
                    std::to_string(default_value))
                       .c_str());
     }
-    std::function<void(const gz::msgs::Model &)> f =
+    std::function<void(const ignition::msgs::Model &)> f =
         std::bind(&Bridge::OnJointState, this, _1);
     gz_node_->Subscribe(
         std::string(ros_node_->get_namespace()) + "/joint_states", f);
@@ -230,7 +228,8 @@ class Bridge {
     for (size_t i = 0; i < alpha_msgs::msg::JointData().data.size(); i++) {
       topic_name = std::string(ros_node_->get_namespace()) + "/joint/" +
                    "joint_" + std::to_string(i + 1) + "/cmd";
-      joint_cmd_pubs_[i] = gz_node_->Advertise<gz::msgs::Double>(topic_name);
+      joint_cmd_pubs_[i] =
+          gz_node_->Advertise<ignition::msgs::Double>(topic_name);
     }
     std::string topic_sub_name;
 
@@ -248,13 +247,13 @@ class Bridge {
   void CreateBaseForceTorqueBridge() {
     base_ft_pub_ = ros_node_->create_publisher<geometry_msgs::msg::Wrench>(
         "force_torque_gz", rclcpp::SystemDefaultsQoS());
-    std::function<void(const gz::msgs::Wrench &)> f =
+    std::function<void(const ignition::msgs::Wrench &)> f =
         std::bind(&Bridge::OnBaseForceTorque, this, _1);
     gz_node_->Subscribe(
         std::string(ros_node_->get_namespace()) + "/force_torque_gz", f);
   }
 
-  void OnClock(const gz::msgs::Clock &msg) {
+  void OnClock(const ignition::msgs::Clock &msg) {
     rosgraph_msgs::msg::Clock ros_msg;
     ros_gz_bridge::convert_gz_to_ros(msg, ros_msg);
     clock_pub_->publish(ros_msg);
@@ -315,7 +314,7 @@ class Bridge {
 
   void OnVelocityCommand(
       const hippo_control_msgs::msg::VelocityControlTarget::SharedPtr ros_msg) {
-    gz::msgs::Twist msg;
+    ignition::msgs::Twist msg;
     msg.mutable_linear()->set_x(ros_msg->velocity.linear.x);
     msg.mutable_linear()->set_y(ros_msg->velocity.linear.y);
     msg.mutable_linear()->set_z(ros_msg->velocity.linear.z);
@@ -360,14 +359,14 @@ class Bridge {
           "Joint Command Message and num. of publishers aren't equal!");
       return;
     }
-    gz::msgs::Double ign_msg;
+    ignition::msgs::Double ign_msg;
     for (size_t i = 0; i < joint_cmd_pubs_.size(); i++) {
       ign_msg.set_data(msg->data[i]);
       joint_cmd_pubs_[i].Publish(ign_msg);
     }
   }
 
-  void OnJointAcceleration(const gz::msgs::Double_V &msg) {
+  void OnJointAcceleration(const ignition::msgs::Double_V &msg) {
     alpha_msgs::msg::JointData ros_msg;
     if (msg.data_size() > int(ros_msg.data.size())) {
       RCLCPP_ERROR(ros_node_->get_logger(),
@@ -381,7 +380,7 @@ class Bridge {
     joint_accel_pub_->publish(ros_msg);
   }
 
-  void OnJointState(const gz::msgs::Model &msg) {
+  void OnJointState(const ignition::msgs::Model &msg) {
     if ((ros_node_->now() - last_joint_state_update_).seconds() >=
         1 / joint_state_update_frequency_) {
       sensor_msgs::msg::JointState ros_msg;
@@ -410,7 +409,7 @@ class Bridge {
     }
   }
 
-  void OnBaseForceTorque(const gz::msgs::Wrench &msg) {
+  void OnBaseForceTorque(const ignition::msgs::Wrench &msg) {
     geometry_msgs::msg::Wrench ros_msg;
     ros_gz_bridge::convert_gz_to_ros(msg, ros_msg);
     base_ft_pub_->publish(ros_msg);
@@ -448,10 +447,10 @@ class Bridge {
       thrust_sub_;
   rclcpp::Subscription<
       hippo_control_msgs::msg::VelocityControlTarget>::SharedPtr vel_cmd_sub_;
-  // gz::transport::Node::Publisher linear_vel_cmd_pub_;
-  // gz::transport::Node::Publisher angular_vel_cmd_pub_;
-  gz::transport::Node::Publisher vel_cmd_pub_;
-  // gz::transport::Node::Publisher model_vel_cmd_pub_;
+  // ignition::transport::Node::Publisher linear_vel_cmd_pub_;
+  // ignition::transport::Node::Publisher angular_vel_cmd_pub_;
+  ignition::transport::Node::Publisher vel_cmd_pub_;
+  // ignition::transport::Node::Publisher model_vel_cmd_pub_;
 
   std::string manipulator_topic_prefix_;
   std::string auv_topic_prefix_;
@@ -461,7 +460,7 @@ class Bridge {
   rclcpp::Publisher<alpha_msgs::msg::JointData>::SharedPtr joint_accel_pub_;
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub_;
   rclcpp::Publisher<geometry_msgs::msg::Wrench>::SharedPtr base_ft_pub_;
-  std::vector<gz::transport::Node::Publisher> joint_cmd_pubs_;
+  std::vector<ignition::transport::Node::Publisher> joint_cmd_pubs_;
   rclcpp::Subscription<alpha_msgs::msg::JointData>::SharedPtr joint_cmd_sub_;
 };
 
