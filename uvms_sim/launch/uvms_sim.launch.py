@@ -13,13 +13,10 @@ def generate_launch_description():
     simulate_kinematics = False
     use_sim_time = True
     use_hydro = True
-    # start_gui = True
 
     start_gazebo = launch.actions.IncludeLaunchDescription(
         launch.launch_description_sources.PythonLaunchDescriptionSource(
-            str(hippo_sim_path / 'launch/start_gazebo.launch.py'))
-        # launch_arguments={'start_gui': str(start_gui)}.items()    
-            )
+            str(hippo_sim_path / 'launch/start_gazebo.launch.py')))
 
     spawn_uvms = launch.actions.IncludeLaunchDescription(
         launch.launch_description_sources.PythonLaunchDescriptionSource(

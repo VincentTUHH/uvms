@@ -31,8 +31,6 @@ def generate_launch_description():
     vehicle_name = 'klopsi00'
     use_sim_time = True
     use_hydro = True
-    # offset_distance = 0.1
-    # number_test_rounds = 3
 
     alpha_estimation = launch.actions.IncludeLaunchDescription(
         launch.launch_description_sources.PythonLaunchDescriptionSource(
@@ -149,30 +147,12 @@ def generate_launch_description():
         launch_arguments={'use_sim_time': str(use_sim_time)}.items(),
     )
 
-    gripper = launch.actions.IncludeLaunchDescription(
-        launch.launch_description_sources.PythonLaunchDescriptionSource(
-            str(alpha_ctrl_path / 'launch/gripper_control.launch.py')),
-        launch_arguments={
-            'vehicle_name': vehicle_name,
-            'use_sim_time': str(use_sim_time)}.items()
-    )
-
     velocity_command = launch.actions.IncludeLaunchDescription(
         launch.launch_description_sources.PythonLaunchDescriptionSource(
             str(alpha_ctrl_path / 'launch/velocity_command.launch.py')),
         launch_arguments={
             'vehicle_name': vehicle_name,
             'use_sim_time': str(use_sim_time)}.items()
-    )
-
-    pick_and_place_planner = launch.actions.IncludeLaunchDescription(
-        launch.launch_description_sources.PythonLaunchDescriptionSource(
-            str(uvms_kin_ctrl_path / 'launch/planner_ctrl.launch.py')),
-        launch_arguments={
-            'vehicle_name': vehicle_name,
-            # 'offset_distance': str(offset_distance),
-            # 'number_test_rounds':str(number_test_rounds)
-            }.items()
     )
 
     return launch.LaunchDescription([
@@ -186,7 +166,5 @@ def generate_launch_description():
         uvms_trajectory_gen,
         uvms_visualization,
         rviz,
-        gripper,
         velocity_command,
-        pick_and_place_planner
     ])

@@ -33,11 +33,6 @@ def generate_launch_description():
         description='used for node namespace',
     )
 
-
-    # the topic name from joint_vel_cmds had to be changed for the Setup from Niklas
-    # since the hardware interface on the pi was changed to accept arm_vel_commands instead of joint_vel_commands
-    # for the pick and place setup, the remap must not be done, since another node ist started 
-    # that merges joint_vel_cmds and gripper_vel_cmds and publishes those to ar_vel_cmds then
     control_node = launch_ros.actions.Node(package='uvms_kinematic_ctrl',
                                            executable='uvms_kin_ctrl_node',
                                            namespace=vehicle_name,
@@ -49,7 +44,6 @@ def generate_launch_description():
                                                        bluerov_pose_control_config_path
                                                        ],
                                            output='screen',
-                                        #    remappings=[('joint_vel_cmds', 'arm_vel_cmds'),],
                                            )
     
 
