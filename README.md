@@ -88,3 +88,6 @@ The control framework can then be started using:
 ```
 ros2 launch bluerov_ctrl top_bluerov_sim_complete.launch.py vehicle_name:=klopsi00
 ```
+
+### Pick and Place Testbench
+All construction files required to build the testbench and replicate the pick and place experiments are located in the **`testbench_construction/`** folder.
