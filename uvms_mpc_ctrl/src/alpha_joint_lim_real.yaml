@@ -1,0 +1,25 @@
+joint_1:
+  effort: 54.36
+  lower: 0.032
+  upper: 6.02
+  velocity: 0.7
+joint_2:
+  effort: 54.36
+  lower: 0.0174533
+  upper: 3.40339
+  velocity: 0.7
+joint_3:
+  effort: 47.112
+  lower: 0.0174533
+  upper: 3.40339
+  velocity: 0.7
+joint_4:
+  effort: 33.069
+  lower: -100000.0
+  upper: 100000.0
+  velocity: 1.0
+joint_5:
+  effort: 28.992
+  lower: 0.0013
+  upper: 0.0133
+  velocity: 0.003

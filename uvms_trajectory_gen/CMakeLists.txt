@@ -104,7 +104,9 @@ target_link_libraries(uvms_traj_gen_pick_place_node
 install(DIRECTORY launch config
         DESTINATION share/${PROJECT_NAME})
 
-install(TARGETS uvms_traj_gen_node uvms_traj_gen_pick_place_node
+install(TARGETS
+        uvms_traj_gen_node
+        uvms_traj_gen_pick_place_node
         DESTINATION lib/${PROJECT_NAME})
 
 ##############

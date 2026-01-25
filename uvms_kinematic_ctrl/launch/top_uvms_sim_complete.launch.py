@@ -163,7 +163,7 @@ def generate_launch_description():
             bluerov_ctrl,
             bluerov_mixer,
             uvms_kinematic_ctrl,
-            estimation_drift_watchdog,
+            # estimation_drift_watchdog,
             uvms_trajectory_gen,
             uvms_visualization,
             rviz,

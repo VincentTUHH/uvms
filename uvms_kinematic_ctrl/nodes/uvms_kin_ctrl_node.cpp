@@ -130,25 +130,25 @@ void UVMSKinematicControlNode::onSetpointTarget(
             .c_str());
     return;
   }
-  if (!got_first_setpoint_) {
-    got_first_setpoint_ = true;
-  }
-  if (controller_status_ != ControllerStatus::eef_control) {
-    RCLCPP_INFO(this->get_logger(), "Activating end effector controller.");
-    controller_status_ = ControllerStatus::eef_control;
-    RCLCPP_INFO(this->get_logger(),
-                "Deactivating configuration space controller...");
-    startup_controller_->resetConnections();
-  }
+  // if (!got_first_setpoint_) {
+  //   got_first_setpoint_ = true;
+  // }
+  // if (controller_status_ != ControllerStatus::eef_control) {
+  //   RCLCPP_INFO(this->get_logger(), "Activating end effector controller.");
+  //   controller_status_ = ControllerStatus::eef_control;
+  //   RCLCPP_INFO(this->get_logger(),
+  //               "Deactivating configuration space controller...");
+  //   startup_controller_->resetConnections();
+  // }
 
-  setpoint_timeout_timer_->reset();
-  if (setpoint_timed_out_) {
-    RCLCPP_INFO(get_logger(),
-                "Received endeffector trajectory setpoint. Setpoint not timed "
-                "out anymore.");
-    setpoint_timed_out_ = false;
-  }
-  controller_interface_->setSetpointTarget(_msg);
+  // setpoint_timeout_timer_->reset();
+  // if (setpoint_timed_out_) {
+  //   RCLCPP_INFO(get_logger(),
+  //               "Received endeffector trajectory setpoint. Setpoint not timed "
+  //               "out anymore.");
+  //   setpoint_timed_out_ = false;
+  // }
+  // controller_interface_->setSetpointTarget(_msg);
 }
 
 void UVMSKinematicControlNode::onSetpointTargetPrediction(

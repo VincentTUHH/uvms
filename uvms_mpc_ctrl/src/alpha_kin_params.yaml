@@ -1,0 +1,42 @@
+/**:
+  ros__parameters:
+    link_1:
+      a: 0.02
+      active: true
+      alp: 1.5707963267948966
+      d: 0.0462
+      dh_link: true
+      inertial: true
+      theta0: 3.141592653589793
+    link_2:
+      a: 0.1507053084665567
+      active: true
+      alp: 3.141592653589793
+      d: 0.0
+      dh_link: true
+      inertial: true
+      theta0: -1.3021582029078473
+    link_3:
+      a: 0.02
+      active: true
+      alp: -1.5707963267948966
+      d: 0.0
+      dh_link: true
+      inertial: true
+      theta0: -1.3021582029078473
+    link_4:
+      a: 0.0
+      active: true
+      alp: 1.5707963267948966
+      d: -0.18
+      dh_link: true
+      inertial: true
+      theta0: 1.5707963267948966
+    link_5:
+      a: 0.0
+      active: false
+      alp: 0.0
+      d: 0.0
+      dh_link: true
+      inertial: false
+      theta0: -1.5707963267948966
