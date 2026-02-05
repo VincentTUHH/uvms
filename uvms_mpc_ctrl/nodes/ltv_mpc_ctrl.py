@@ -327,6 +327,30 @@ class CFTOCSolver:
             # cost function terms
             # --------------------- #
 
+            
+            v_nu = xk[self.n_joints:self.n_joints + self.n_dof]  # bluerov body velocity
+            v_lin_vel = v_nu[0:3]
+            v_ang_vel = v_nu[3:6]
+            v_eta = xk[self.n_joints+self.n_dof: self.n_joints+self.n_dof +7]          # bluerov pose
+            v_pos = v_eta[0:3]
+            v_att = v_eta[3:7]
+
+            qw = v_att[0]
+            qx = v_att[1]
+            qy = v_att[2]
+            qz = v_att[3]
+
+            tilt_ref_deg = 20.0
+            tilt_ref = ca.sin(ca.pi * tilt_ref_deg / 360.0)**2  # sin^2(25°/2)
+
+            tilt_norm = (qx**2 + qy**2) / tilt_ref
+            w_tilt = 1.0 
+
+            cost += w_tilt * tilt_norm
+
+
+
+
             # eef pose tracking
             pos_eef_err_run = ref_eef_pos[:, k] - p_eef
             pos_eef_err_run_norm = pos_eef_err_run / ca.DM(self.cost_scaling["eef_pos"])
