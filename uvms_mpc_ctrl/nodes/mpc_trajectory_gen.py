@@ -14,36 +14,26 @@ def make_eef_connecting_traj_with_wait(
     N_wait: int,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Build a connecting trajectory that
-      1) moves the EEF in a straight line with moderate speed
-         from the *current* pose (p_eef_real_0, att_eef_real_0)
-         to the *initial* pose of (ref_eef_pos_run, ref_eef_att_run),
-      2) then waits at that final pose for N_wait steps.
+    Smooth connecting trajectory:
+      - starts with v=0, a=0
+      - ends with v=0, a=0
+      - acceleration phase lasts 5s, deceleration phase lasts 5s
+      - if distance allows: reaches v_max after 5s, cruises, then decelerates 5s before end
+      - if distance too short: reaches peak velocity once in the middle, then decelerates (no cruise)
 
     Parameters
     ----------
-    p_eef_real_0 : (3,)
-        Current EEF position.
-    att_eef_real_0 : (4,)
-        Current EEF attitude quaternion.
-    ref_eef_pos_run : (3, T)
-        Existing reference EEF position trajectory.
-    ref_eef_att_run : (4, T)
-        Existing reference EEF attitude trajectory.
     dt : float
         Sampling time.
     v_max : float
-        Desired maximum translational speed [m/s].
+        Maximum translational speed [m/s].
     N_wait : int
-        Number of samples to stay at the final pose
-        (typically N_HORIZON).
+        Number of samples to stay at the final pose.
 
     Returns
     -------
     conn_pos_full : (3, N_conn + N_wait)
-        Connecting + waiting position trajectory.
     conn_att_full : (4, N_conn + N_wait)
-        Connecting + waiting attitude trajectory.
     """
     p_start = np.asarray(p_eef_real_0, dtype=float).reshape(3)
     q_start = np.asarray(att_eef_real_0, dtype=float).reshape(4)
@@ -51,27 +41,86 @@ def make_eef_connecting_traj_with_wait(
     p_target = np.asarray(ref_eef_pos_run[:, 0], dtype=float).reshape(3)
     q_target = np.asarray(ref_eef_att_run[:, 0], dtype=float).reshape(4)
 
-    # distance and duration
-    d = np.linalg.norm(p_target - p_start)
-    if d < 1e-6:
-        # almost same point → at least one step
-        T = dt
+    dp = p_target - p_start
+    d = float(np.linalg.norm(dp))
+
+    # If already at target: just output one point + wait
+    if d < 1e-9:
+        conn_pos = p_start.reshape(3, 1)
+        conn_att = q_start.reshape(4, 1)
+
+        wait_pos = np.tile(conn_pos, (1, N_wait))
+        wait_att = np.tile(conn_att, (1, N_wait))
+        return np.hstack([conn_pos, wait_pos]), np.hstack([conn_att, wait_att])
+
+    # Unit direction along the line
+    direction = dp / d
+
+    # Fixed ramp time requirement
+    T_ramp = 5.0  # seconds
+
+    # Distance required for accel+decel with peak velocity v_peak (cosine ramp):
+    # accel distance = v_peak * T_ramp / 2
+    # decel  distance = v_peak * T_ramp / 2
+    # total (no-cruise) = v_peak * T_ramp
+    d_needed_for_vmax_no_cruise = v_max * T_ramp
+
+    if d >= d_needed_for_vmax_no_cruise:
+        # Trapezoidal: reach v_max after 5s, cruise, decelerate last 5s
+        v_peak = v_max
+        d_cruise = d - v_peak * T_ramp
+        T_cruise = d_cruise / v_peak
     else:
-        T = max(d / v_max, dt)
+        # Too short: no cruise, peak once in the middle (at t = 5s)
+        v_peak = d / T_ramp  # <= v_max
+        T_cruise = 0.0
 
-    N_conn = int(np.ceil(T / dt)) + 1  # +1 to include final point
-    t = np.linspace(0.0, 1.0, N_conn)
+    T_total = 2.0 * T_ramp + T_cruise
 
-    # straight-line interpolation in position
-    conn_pos = (p_start[:, None] +
-                (p_target - p_start)[:, None] * t[None, :])
+    # Discrete time vector (include final point)
+    t = np.arange(0.0, T_total + dt, dt)
 
-    # quaternion SLERP for attitude
-    conn_att = slerp(q_start, q_target, t)
+    # Precompute constants
+    pi = np.pi
+    d_ramp = v_peak * T_ramp / 2.0  # distance covered in accel ramp (and also in decel ramp)
 
-    # ----------------------------------------------------------------------
-    # Wait at final pose for N_wait steps
-    # ----------------------------------------------------------------------
+    # Path-length l(t) along the line, from 0 to d
+    l = np.empty_like(t)
+
+    # Segment boundaries
+    t1 = T_ramp
+    t2 = T_ramp + T_cruise
+    t3 = T_total
+
+    # Accel: v(t) = v_peak * 0.5 * (1 - cos(pi * t / T_ramp))
+    # l(t) = ∫ v dt = v_peak * ( t/2 - T_ramp/(2*pi) * sin(pi*t/T_ramp) )
+    idx_acc = t <= t1
+    ta = t[idx_acc]
+    l[idx_acc] = v_peak * (ta / 2.0 - (T_ramp / (2.0 * pi)) * np.sin(pi * ta / T_ramp))
+
+    # Cruise: constant velocity
+    idx_cruise = (t > t1) & (t <= t2)
+    tc = t[idx_cruise]
+    l[idx_cruise] = d_ramp + v_peak * (tc - t1)
+
+    # Decel: v(u) = v_peak * 0.5 * (1 + cos(pi * u / T_ramp)), u = t - t2
+    # l_dec(u) = v_peak * ( u/2 + T_ramp/(2*pi) * sin(pi*u/T_ramp) )
+    idx_dec = t > t2
+    td = t[idx_dec]
+    u = td - t2
+    l[idx_dec] = d_ramp + v_peak * T_cruise + v_peak * (u / 2.0 + (T_ramp / (2.0 * pi)) * np.sin(pi * u / T_ramp))
+
+    # Numerical safety: clamp to [0, d]
+    l = np.clip(l, 0.0, d)
+
+    # Position along the line
+    conn_pos = p_start[:, None] + direction[:, None] * l[None, :]
+
+    # Use the same smooth progress for attitude (0..1 based on traveled distance)
+    s = (l / d).astype(float)
+    conn_att = slerp(q_start, q_target, s)
+
+    # Wait at final pose
     final_pos = conn_pos[:, -1].reshape(3, 1)
     final_att = conn_att[:, -1].reshape(4, 1)
 
@@ -125,32 +174,13 @@ def back_to_start_with_wait(
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Build a "back-to-start" trajectory that:
-      1) waits at the *last* pose of the reference for N_wait_begin steps,
-      2) moves the EEF in a straight line (pos) and via SLERP (att)
-         from the *last* pose of the reference to the *first* pose,
-      3) waits at the *first* pose for N_wait_end steps.
-
-    Parameters
-    ----------
-    ref_eef_pos_run : (3, T)
-        Reference EEF position trajectory.
-    ref_eef_att_run : (4, T)
-        Reference EEF attitude quaternion trajectory (w, x, y, z).
-    dt : float
-        Sampling time.
-    v_max : float
-        Desired maximum translational speed [m/s] for the transition segment.
-    N_wait_begin : int
-        Number of samples to hold the last pose before transitioning.
-    N_wait_end : int
-        Number of samples to hold the first pose after transitioning.
-
-    Returns
-    -------
-    back_pos_full : (3, N_wait_begin + N_back + N_wait_end)
-        Wait + transition + wait position trajectory.
-    back_att_full : (4, N_wait_begin + N_back + N_wait_end)
-        Wait + transition + wait attitude trajectory.
+      1) waits at the last pose for N_wait_begin steps,
+      2) transitions last -> first with a C^2-smooth time law:
+           - v(0)=a(0)=0, v(T)=a(T)=0
+           - accel duration 5s, decel duration 5s
+           - reach v_max after 5s and decelerate 5s before the end if distance allows
+           - otherwise reach a single peak velocity in the middle and decelerate
+      3) waits at the first pose for N_wait_end steps.
     """
     ref_pos = np.asarray(ref_eef_pos_run, dtype=float)
     ref_att = np.asarray(ref_eef_att_run, dtype=float)
@@ -176,25 +206,83 @@ def back_to_start_with_wait(
     p_target = ref_pos[:, 0].reshape(3)
     q_target = ref_att[:, 0].reshape(4)
 
-    # duration based on distance and v_max
-    d = np.linalg.norm(p_target - p_start)
-    if d < 1e-6:
-        T_move = dt
-    else:
-        T_move = max(d / v_max, dt)
+    dp = p_target - p_start
+    d = float(np.linalg.norm(dp))
 
-    N_back = int(np.ceil(T_move / dt)) + 1  # include final point
-    t = np.linspace(0.0, 1.0, N_back)
-
-    # transition segment
-    back_pos = (p_start[:, None] + (p_target - p_start)[:, None] * t[None, :])
-    back_att = slerp(q_start, q_target, t)  # (4, N_back)
-
-    # wait at last pose (begin)
+    # Wait at last pose (begin)
     wait_begin_pos = np.tile(p_start.reshape(3, 1), (1, N_wait_begin))
     wait_begin_att = np.tile(q_start.reshape(4, 1), (1, N_wait_begin))
 
-    # wait at first pose (end)
+    # If already at target: no motion segment, just wait at first pose
+    if d < 1e-9:
+        back_pos = p_start.reshape(3, 1)
+        back_att = q_start.reshape(4, 1)
+        wait_end_pos = np.tile(p_target.reshape(3, 1), (1, N_wait_end))
+        wait_end_att = np.tile(q_target.reshape(4, 1), (1, N_wait_end))
+        back_pos_full = np.hstack([wait_begin_pos, back_pos, wait_end_pos])
+        back_att_full = np.hstack([wait_begin_att, back_att, wait_end_att])
+        return back_pos_full, back_att_full
+
+    direction = dp / d
+
+    # Fixed ramp time requirement
+    T_ramp = 5.0  # seconds
+
+    # Distance needed to do accel+decel with v_max and no cruise: d = v_max * T_ramp
+    # (because each ramp covers v_peak*T_ramp/2, total ramps cover v_peak*T_ramp)
+    d_needed_for_vmax_no_cruise = v_max * T_ramp
+
+    if d >= d_needed_for_vmax_no_cruise:
+        # Trapezoidal: reach v_max after 5s, cruise, then decel last 5s
+        v_peak = v_max
+        d_cruise = d - v_peak * T_ramp
+        T_cruise = d_cruise / v_peak
+    else:
+        # Too short: triangular (no cruise), peak once in the middle (at t=5s)
+        v_peak = d / T_ramp  # <= v_max
+        T_cruise = 0.0
+
+    T_total = 2.0 * T_ramp + T_cruise
+
+    # Discrete time vector (include final point)
+    t = np.arange(0.0, T_total + dt, dt)
+
+    pi = np.pi
+    d_ramp = v_peak * T_ramp / 2.0  # distance covered in accel ramp (and decel ramp)
+
+    # Path length l(t) from 0 to d
+    l = np.empty_like(t)
+
+    t1 = T_ramp
+    t2 = T_ramp + T_cruise
+
+    # Accel segment (0..T_ramp)
+    idx_acc = t <= t1
+    ta = t[idx_acc]
+    l[idx_acc] = v_peak * (ta / 2.0 - (T_ramp / (2.0 * pi)) * np.sin(pi * ta / T_ramp))
+
+    # Cruise segment (T_ramp..T_ramp+T_cruise)
+    idx_cruise = (t > t1) & (t <= t2)
+    tc = t[idx_cruise]
+    l[idx_cruise] = d_ramp + v_peak * (tc - t1)
+
+    # Decel segment (T_ramp+T_cruise..end)
+    idx_dec = t > t2
+    td = t[idx_dec]
+    u = td - t2
+    l[idx_dec] = d_ramp + v_peak * T_cruise + v_peak * (u / 2.0 + (T_ramp / (2.0 * pi)) * np.sin(pi * u / T_ramp))
+
+    # Clamp for numerical safety
+    l = np.clip(l, 0.0, d)
+
+    # Transition segment in position
+    back_pos = p_start[:, None] + direction[:, None] * l[None, :]
+
+    # Use normalized progress for attitude SLERP
+    s = (l / d).astype(float)
+    back_att = slerp(q_start, q_target, s)  # (4, N_back)
+
+    # Wait at first pose (end)
     wait_end_pos = np.tile(p_target.reshape(3, 1), (1, N_wait_end))
     wait_end_att = np.tile(q_target.reshape(4, 1), (1, N_wait_end))
 
@@ -263,6 +351,16 @@ def build_eef_reference_trajectory(dt: float, traj_type: str):
             dt=dt,
         )
         return ref_eef_pos_run, ref_eef_att_run
+    
+    elif traj_type == "hold_pose":
+        cfg = TRAJ_ARGS["hold_pose"]
+        ref_pos, ref_att, t = generate_eef_hold_trajectory(
+            p_set=cfg["p_start"],     # or p_goal, doesn't matter if you want hold
+            q_set=cfg["q_start"],
+            dt=dt,
+            T_hold=cfg["duration"],                       # e.g. horizon
+        )
+        return ref_pos, ref_att
     
     # (Removed duplicate branch for circ_oscillation_3d_radial_with_eights)
 
@@ -581,6 +679,8 @@ def generate_eef_circle_with_z_osc_3d_radial(
 
     return pos, quat, t
 
+import numpy as np
+
 def generate_eef_sine_xz_const_speed(
     p_start: np.ndarray,
     p_goal: np.ndarray,
@@ -590,11 +690,19 @@ def generate_eef_sine_xz_const_speed(
     dt: float,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Forward motion in y with sine oscillations in z (historical name: sine_xz).
+    Forward motion in y with sine oscillations in z (historical name: sine_xz),
+    but with smooth speed ramps using trajectory extension:
 
-    - y goes from p_start[1] to p_goal[1] with constant average forward speed fwd_speed
-    - z oscillates with n_osc full oscillations over the total duration (starts/ends at 0 offset)
-    - x is linearly interpolated (typically constant)
+    - The "core" segment (tau in [0,1]) is the original p_start -> p_goal motion.
+      At tau=0 (p_start) the trajectory already has the desired speed fwd_speed.
+      At tau=1 (p_goal) it still has the desired speed fwd_speed.
+
+    - Before tau=0 and after tau=1, the trajectory is extended so that:
+        * start: v=0, a=0 -> accelerate smoothly to desired speed
+        * end:   decelerate smoothly from desired speed -> v=0, a=0
+      Desired ramp duration is 5 s, but the ramp must happen within 15 cm
+      along the forward direction. If 5 s would exceed 15 cm, ramp time is
+      reduced to fit within 15 cm (still smooth).
 
     Orientation:
       - EEF z-axis tangent to trajectory (velocity direction)
@@ -615,7 +723,7 @@ def generate_eef_sine_xz_const_speed(
     if n_osc < 0:
         raise ValueError(f"n_osc must be >= 0, got {n_osc}")
 
-    # Total time from forward y distance
+    # Forward distance (y)
     dy = float(p_goal[1] - p_start[1])
     y_dist = abs(dy)
     if y_dist < 1e-9:
@@ -624,17 +732,71 @@ def generate_eef_sine_xz_const_speed(
         t = np.array([0.0], dtype=float)
         return pos, quat, t
 
-    T_total = y_dist / float(fwd_speed)
-    N = int(np.round(T_total / dt)) + 1
-    t = np.linspace(0.0, T_total, N)
-    tau = t / T_total  # in [0,1]
+    # Core duration (the part from p_start to p_goal)
+    T_core = y_dist / float(fwd_speed)
+    tau_dot_const = 1.0 / T_core  # constant tau rate during core
 
-    # Linear baseline from start to goal
+    # Ramp requirements
+    T_ramp_des = 5.0           # desired ramp time [s]
+    y_ramp_max = 0.15          # max ramp distance [m] (15 cm)
+
+    # For a cosine ramp from 0->const, tau increase during ramp is:
+    # delta_tau = tau_dot_const * T_ramp / 2
+    # corresponding forward distance ~ fwd_speed * T_ramp / 2
+    # Enforce distance <= 0.15m by limiting ramp time if needed.
+    T_ramp_max_by_dist = 2.0 * y_ramp_max / float(fwd_speed)
+    T_ramp = min(T_ramp_des, T_ramp_max_by_dist)
+
+    # If fwd_speed is so high that T_ramp becomes ~0, keep at least one dt
+    T_ramp = max(T_ramp, dt)
+
+    # Amount of tau covered in accel (and decel)
+    tau_ext = tau_dot_const * T_ramp / 2.0  # so accel goes from -tau_ext to 0
+
+    # Total duration: accel + core + decel
+    T_total = 2.0 * T_ramp + T_core
+
+    # Time vector
+    t = np.arange(0.0, T_total + dt, dt)
+
+    # Build tau(t) with C^2-smooth accel/decel in tau-space
+    pi = np.pi
+    tau = np.empty_like(t)
+
+    t1 = T_ramp
+    t2 = T_ramp + T_core  # start of decel
+
+    # Accel: tau_dot ramps 0 -> tau_dot_const with zero accel at ends
+    # tau(t) = -tau_ext + tau_dot_const * ( t/2 - T_ramp/(2*pi) * sin(pi t/T_ramp) )
+    idx_acc = t <= t1
+    ta = t[idx_acc]
+    tau[idx_acc] = (
+        -tau_ext
+        + tau_dot_const * (ta / 2.0 - (T_ramp / (2.0 * pi)) * np.sin(pi * ta / T_ramp))
+    )
+
+    # Core: constant tau rate
+    idx_core = (t > t1) & (t <= t2)
+    tc = t[idx_core]
+    tau[idx_core] = (tc - t1) * tau_dot_const
+
+    # Decel: tau_dot ramps tau_dot_const -> 0 (mirror)
+    # tau(t) = 1 + tau_dot_const * ( u/2 + T_ramp/(2*pi) * sin(pi u/T_ramp) ), u=t-t2
+    idx_dec = t > t2
+    td = t[idx_dec]
+    u = td - t2
+    tau[idx_dec] = (
+        1.0
+        + tau_dot_const * (u / 2.0 + (T_ramp / (2.0 * pi)) * np.sin(pi * u / T_ramp))
+    )
+
+    # Now evaluate the *extended* sine trajectory using tau outside [0,1]
+    # Linear baseline from start to goal (defined for all tau)
     x = p_start[0] + (p_goal[0] - p_start[0]) * tau
     y = p_start[1] + (p_goal[1] - p_start[1]) * tau
     z_lin = p_start[2] + (p_goal[2] - p_start[2]) * tau
 
-    # Sine in z: starts/ends at zero offset so endpoints match p_start/p_goal
+    # Sine in z across extended tau (continuous continuation)
     if n_osc > 0 and abs(A) > 0.0:
         z = z_lin + A * np.sin(2.0 * np.pi * float(n_osc) * tau)
     else:
@@ -642,7 +804,8 @@ def generate_eef_sine_xz_const_speed(
 
     pos = np.vstack([x, y, z])  # (3, N)
 
-    # Velocity for tangent direction
+    # Velocity for tangent direction (finite differences)
+    N = pos.shape[1]
     v = np.zeros((3, N), dtype=float)
     if N >= 2:
         dt_vec = t[1:] - t[:-1]
@@ -689,10 +852,51 @@ def generate_eef_sine_xz_const_speed(
 
     quat = np.array(quat_list)  # (N,4)
 
-    # continuity
+    # quaternion continuity
     for k in range(1, N):
         if np.dot(quat[k - 1], quat[k]) < 0.0:
             quat[k] = -quat[k]
 
     quat = quat.T  # (4,N)
+    return pos, quat, t
+
+def generate_eef_hold_trajectory(
+    p_set: np.ndarray,
+    q_set: np.ndarray,
+    dt: float,
+    T_hold: float | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Generate a stationary EEF reference trajectory that holds a pose.
+
+    You specify either:
+      - T_hold (seconds), or
+      - N_hold (number of samples)
+
+    Returns
+    -------
+    pos : (3, N)
+    quat: (4, N)  (w,x,y,z)
+    t   : (N,)
+    """
+    if dt <= 0.0:
+        raise ValueError(f"dt must be > 0, got {dt}")
+
+    if T_hold is not None:
+        if T_hold < 0.0:
+            raise ValueError(f"T_hold must be >= 0, got {T_hold}")
+        # include final point like your other generators
+        N = int(np.round(T_hold / dt)) + 1
+        N = max(N, 1)
+        t = np.linspace(0.0, (N - 1) * dt, N)
+
+    p = np.asarray(p_set, dtype=float).reshape(3)
+    q = np.asarray(q_set, dtype=float).reshape(4)
+    qn = np.linalg.norm(q)
+    if qn < 1e-12:
+        raise ValueError("q_set has near-zero norm.")
+    q = q / qn
+
+    pos = np.tile(p.reshape(3, 1), (1, N))
+    quat = np.tile(q.reshape(4, 1), (1, N))
     return pos, quat, t

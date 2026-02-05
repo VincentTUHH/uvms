@@ -18,7 +18,7 @@
       w_max_init: 0.2 # 0.2 -> for auv trajectory
       dq_max_init: 0.8 # 0.3 -> for manipulator trajectory
       start_accuracy: 0.025 # for auv position, auv attitude and manipulator joint states
-      start_pos: [ 1.0, 2.0, -0.7 ] #[0.8, 1.0, -0.9] #[ 1.0, 2.0, -0.7 ] #[ 1.0, 1.4, -0.7 ] #[ 1.0, 2.0, -0.7 ] #[ 0.6, 2.0, -0.7 ] #
+      start_pos: [ 0.7, 2.0, -0.7 ] #[0.8, 1.0, -0.9] #[ 1.0, 2.0, -0.7 ] #[ 1.0, 1.4, -0.7 ] #[ 1.0, 2.0, -0.7 ] #[ 0.6, 2.0, -0.7 ] #
       # left/right: [ 1.0, 1.4, -0.7 ]
       # behind: [ 1.0, 1.4, -0.7 ]
       start_att: [ 0.0, 0.0, 0.0 ]  # [0.0, 0.0, 0.0]  # attitude rpy, afterwards multiplied by pi in [rad]

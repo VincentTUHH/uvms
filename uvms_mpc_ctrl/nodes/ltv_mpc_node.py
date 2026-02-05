@@ -38,13 +38,18 @@ import time
 from dataclasses import dataclass
 
 
-SEND_FREQ = 50.0  # Hz
-TIME_STEP = 1.0 / SEND_FREQ  # s
 NUM_JOINTS = 4
 NUM_MOTORS = 8
 N_HORIZON = 20  # prediction horizon steps
 N_RUNS = 5
 CTRL_PWM = True
+
+SEND_FREQ = 50.0          # Hz (command loop)
+MPC_FREQ  = 50          # Hz (solver)
+TIME_STEP = 1.0 / SEND_FREQ
+
+assert SEND_FREQ % MPC_FREQ == 0, "MPC freq must divide command freq"
+MPC_DECIMATION = int(SEND_FREQ / MPC_FREQ)  # x = 2
 
 
 # before starting the mpc controller make a hard coded start up controller, like the once in uvms kinematic control,
@@ -88,10 +93,16 @@ class LTVMPCNode(Node):
         solver_cfg = args.SOLVER_ARGS[solver]
         solver_opts = solver_cfg["opts"]
 
+        self.control_tick = 0
+
+        self.mpc_dt = TIME_STEP * MPC_DECIMATION
+
+        self.counter_to_start = 0
+
         joint_pos_lim, _, joint_vel_lim, bluerov_params, manipulator_dh_params, alpha_params, path_thruster_model_params = self.load_model_and_joint_params()
 
         self.mpc_controller = CFTOCSolver(
-            dt=TIME_STEP,
+            dt=self.mpc_dt,
             solver=solver,
             solver_opts=solver_opts,
             weights=args.COST_WEIGHTS,
@@ -343,6 +354,12 @@ class LTVMPCNode(Node):
             qos_default
         )
 
+        self.optimization_feasibility_pub = self.create_publisher(
+            Int64,
+            'mpc_optimization/feasibility',
+            qos_default
+        )
+
     def init_subscribers(self):
         qos_default = qos_profile_system_default
 
@@ -540,14 +557,15 @@ class LTVMPCNode(Node):
 
             # ---- CALL YOUR SOLVER HERE ----
             t0 = time.perf_counter()
-            uq, uv, constraint_flags, J_opt = self.mpc_controller.get_ctrl_cmd(x0, 
+            uq, uv, constraint_flags, J_opt, solve_time, q_pos_pred, veh_lin_vel_pred, veh_ang_vel_pred, veh_pos_pred, veh_att_pred = self.mpc_controller.get_ctrl_cmd(x0, 
                                                                                 pos_slice, 
                                                                                 att_slice)
             # self.get_logger().error(f"type(uq)={type(uq)}, type(uv)={type(uv)}, uv={uv}")
             t1 = time.perf_counter()
             solve_time_ms = (t1 - t0) * 1000.0
 
-            self.get_logger().info(f"MPC solve time: {solve_time_ms:.1f} ms")
+            self.get_logger().info(f"Total solve time: {solve_time_ms:.1f} ms")
+            self.get_logger().info(f"Pure solve time: {solve_time*1000:.1f}")
 
             feasible = (uq is not None)
 
@@ -581,10 +599,13 @@ class LTVMPCNode(Node):
                 # - overwrite with safe fallback
                 if new_cmd.feasible:
                     self.last_cmd = new_cmd
+                    self.counter_to_start = self.counter_to_start + 1
+                    if self.counter_to_start < 5:
+                        self.get_logger().info(f"Got first feasible MPC solutions. Run {self.counter_to_start} took {solve_time_ms:.1f} ms.")
                     if not self.got_first_feasible:
                         self.got_first_feasible = True
-                        self.get_logger().info(f"Got first feasible MPC solution. It took {solve_time_ms:.1f} ms.")
-
+                        
+            self.publish_feasibility(new_cmd.feasible)
         except Exception as e:
             self.get_logger().error(f"MPC worker failed: {e}")
         finally:
@@ -593,42 +614,33 @@ class LTVMPCNode(Node):
     def control_loop(self):
         if not self._start_controller:
             return
-
+    
         # 1) Publish reference pose for visualization and advance sample
         if self.eef_pos_ref_traj is not None and self.eef_att_ref_traj is not None:
             if self.sample < self.eef_pos_ref_traj.shape[1]:
-                pose_msg = PoseStamped()
-                pose_msg.header.stamp = self.get_clock().now().to_msg()
-                pose_msg.header.frame_id = "map"
-
-                pose_msg.pose.position.x = float(self.eef_pos_ref_traj[0, self.sample])
-                pose_msg.pose.position.y = float(self.eef_pos_ref_traj[1, self.sample])
-                pose_msg.pose.position.z = float(self.eef_pos_ref_traj[2, self.sample])
-
-                quat = self.eef_att_ref_traj[:, self.sample]  # wxyz
-                pose_msg.pose.orientation.x = float(quat[1])
-                pose_msg.pose.orientation.y = float(quat[2])
-                pose_msg.pose.orientation.z = float(quat[3])
-                pose_msg.pose.orientation.w = float(quat[0])
-
-                self.eef_pose_ref_pub.publish(pose_msg)
-
-                # advance reference sample at SEND_FREQ
-                self.sample += 1
+                self.publish_reference_pose(sample=self.sample)
             else:
                 # reference finished -> publish zeros and stop solving
                 self.publish_zero_commands()
                 return
+        # 2) Decide whether to run MPC THIS tick
+        run_mpc = (self.control_tick % MPC_DECIMATION == 0)
 
-        # 2) Start MPC solve if possible (non-blocking)
-        self.try_start_mpc_solve()
+        if run_mpc:
+            self.try_start_mpc_solve()
 
-        # 3) Publish latest available commands (last_cmd)
-        # If MPC isn't finished in time, this republishes the previous command.
-        if not self.got_first_feasible:
-            self.publish_zero_commands()
+        # 3) Publish command (ZOH)
+        if self.counter_to_start < 2:
+            pass  # let kinematic controller warm-start MPC
         else:
-            self.publish_last_commands()
+            if not self.got_first_feasible:
+                self.publish_zero_commands()
+            else:
+                self.publish_last_commands()
+
+        # 4) Advance counters
+        self.sample += 1
+        self.control_tick += 1  
 
     def on_eef_pose(self, msg: PoseStamped):
         p = msg.pose.position
@@ -702,6 +714,28 @@ class LTVMPCNode(Node):
         msg = Float32()
         msg.data = float(time_ms)
         self.optimization_time_pub.publish(msg)
+
+    def publish_feasibility(self, feasible: bool):
+        msg = Int64()
+        msg.data = int(feasible)
+        self.optimization_feasibility_pub.publish(msg)
+
+    def publish_reference_pose(self, sample: int):
+        pose_msg = PoseStamped()
+        pose_msg.header.stamp = self.get_clock().now().to_msg()
+        pose_msg.header.frame_id = "map"
+
+        pose_msg.pose.position.x = float(self.eef_pos_ref_traj[0, sample])
+        pose_msg.pose.position.y = float(self.eef_pos_ref_traj[1, sample])
+        pose_msg.pose.position.z = float(self.eef_pos_ref_traj[2, sample])
+
+        quat = self.eef_att_ref_traj[:, sample]  # wxyz
+        pose_msg.pose.orientation.x = float(quat[1])
+        pose_msg.pose.orientation.y = float(quat[2])
+        pose_msg.pose.orientation.z = float(quat[3])
+        pose_msg.pose.orientation.w = float(quat[0])
+
+        self.eef_pose_ref_pub.publish(pose_msg)
 
     def destroy_node(self):
         self.get_logger().info("Shutting down, closing socket.")

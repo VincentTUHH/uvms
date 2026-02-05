@@ -3,6 +3,7 @@ import casadi as ca
 
 import utils_sym
 import utils_math
+import time
 
 import bluerov_dynamics_symbolic as sym_brv
 import manipulator_kinematics_symbolic as sym_manip_kin
@@ -73,7 +74,7 @@ class CFTOCSolver:
             path_thruster_model_params=path_thruster_model_params,
         )
 
-        self.handles = self.build_ocp_template(solver=solver, solver_opts=solver_opts)
+        self.handles = self.build_ocp_template(solver=solver, solver_opts=solver_opts, weights=self.weights)
 
         # store the warm start values
         self.x_warm = np.zeros((self.state_dim + self.n_joints, self.n_horizon + 1), dtype=float)
@@ -116,7 +117,7 @@ class CFTOCSolver:
 
 
         # solve OCP
-        X_opt, U_opt, A_opt, J_opt, lam_g_last, constraint_flags = self.solve_cftoc(
+        X_opt, U_opt, A_opt, J_opt, lam_g_last, constraint_flags, solve_time = self.solve_cftoc(
             U_guess=U_guess,
             X_guess=X_guess,
             A_guess=A_guess,
@@ -131,7 +132,13 @@ class CFTOCSolver:
         )
 
         if X_opt is None:
-            return None, None, constraint_flags, None, 
+            return None, None, constraint_flags, None, solve_time
+        
+        q_pos_pred = X_opt[0:self.n_joints, :]
+        veh_lin_vel_pred = X_opt[self.n_joints: self.n_joints + 3, :]
+        veh_ang_vel_pred = X_opt[self.n_joints + 3: self.n_joints + self.n_dof, :]
+        veh_pos_pred = X_opt[self.n_joints + self.n_dof: self.n_joints + self.n_dof + 3, :]
+        veh_att_pred = X_opt[self.n_joints + self.n_dof + 3: self.n_joints + self.n_dof + 7, :]
 
         # store solution for warm start in next iteration
         self.x_warm = X_opt
@@ -151,7 +158,7 @@ class CFTOCSolver:
             # return 8 normalized commands for ActuatorControls
             uv_apply = self._to_np(uv_adapted)  # in [1100..1900]
             uv_norm = (uv_apply - 1500.0) / 400.0
-            return self._to_np(uq_apply), uv_norm.astype(float), constraint_flags, float(J_opt)
+            return self._to_np(uq_apply), uv_norm.astype(float), constraint_flags, float(J_opt), solve_time, q_pos_pred, veh_lin_vel_pred, veh_ang_vel_pred, veh_pos_pred, veh_att_pred
 
         else:
             uv_forces = self.thruster_model.pwm_to_force(uv_adapted, self.v_bat)
@@ -162,7 +169,7 @@ class CFTOCSolver:
             thrust3 = wrench6[0:3]
             torque3 = wrench6[3:6]
 
-            return self._to_np(uq_apply), (thrust3, torque3), constraint_flags, float(J_opt)
+            return self._to_np(uq_apply), (thrust3, torque3), constraint_flags, float(J_opt), solve_time, q_pos_pred, veh_lin_vel_pred, veh_ang_vel_pred, veh_pos_pred, veh_att_pred
     
     def _to_np(self, x):
         # CasADi DM/MX -> numpy, numpy -> numpy
@@ -212,7 +219,7 @@ class CFTOCSolver:
 
         self.thruster_model = ThrusterInversePoly.load(path_thruster_model_params)
 
-    def build_ocp_template(self, solver: str, solver_opts: dict):
+    def build_ocp_template(self, solver: str, solver_opts: dict, weights: dict):
         opti = ca.Opti()
 
         # decision variables
@@ -230,13 +237,22 @@ class CFTOCSolver:
         ref_eef_pos   = opti.parameter(3, self.n_horizon)
         ref_eef_att   = opti.parameter(4, self.n_horizon)
 
-        # cost function weights
-        w_eef_pos_run = opti.parameter(3)
-        w_eef_att_run = opti.parameter(3)
+        # # cost function weights
+        # w_eef_pos_run = opti.parameter(3)
+        # w_eef_att_run = opti.parameter(3)
 
-        w_u  = opti.parameter(self.ctrl_dim)
+        # w_u  = opti.parameter(self.ctrl_dim)
 
-        w_manip_joint0 = opti.parameter()
+        # w_manip_joint0 = opti.parameter()
+
+        w_eef_pos_run = weights["eef_pos_run"]
+        w_eef_att_run = weights["eef_att_run"]
+        # w_u_joint = weights["w_u_joint"]
+        # w_u_thruster = weights["w_u_thruster"]
+        w_u = np.concatenate((
+            weights["w_u_joint"],
+            np.ones(self.ctrl_dim - self.n_joints) * weights["w_u_thruster"],))
+        w_manip_joint0 = weights["w_manip_joint0"]
 
         # operating point for linearization
         x_star = opti.parameter(self.state_dim + self.n_joints)
@@ -300,7 +316,7 @@ class CFTOCSolver:
             q_eef = y_eef_k[3:7]
 
             # nonlinear constraints
-            if k < 2: # disable hard constraints on state to avoid infeasibility when x0 violates constraints
+            if k <3: #k < 2: # disable hard constraints on state to avoid infeasibility when x0 violates constraints
                 h_k = Hx_flags @ delta_xk + Hu_flags @ delta_uk + h_nom_flags
             else:
                 h_k = Hx @ delta_xk + Hu @ delta_uk + h_nom
@@ -358,10 +374,10 @@ class CFTOCSolver:
             "A": A,
             "ref_eef_pos": ref_eef_pos,
             "ref_eef_att": ref_eef_att,
-            "w_eef_pos_run": w_eef_pos_run,
-            "w_eef_att_run": w_eef_att_run,
-            "w_u": w_u,
-            "w_manip_joint0": w_manip_joint0,
+            # "w_eef_pos_run": w_eef_pos_run,
+            # "w_eef_att_run": w_eef_att_run,
+            # "w_u": w_u,
+            # "w_manip_joint0": w_manip_joint0,
             "x_star": x_star,
             "u_star": u_star,
             "a_star": a_star,
@@ -395,6 +411,7 @@ class CFTOCSolver:
         ref_eef_att: np.ndarray,
         lam_g_prev: np.ndarray,
         ):
+        tA = time.perf_counter()
 
         # unpack optimization handles
 
@@ -403,36 +420,37 @@ class CFTOCSolver:
         U    = self.handles["U"]
         A    = self.handles["A"]
 
-        # ---------------------- #
-        # weights
-        # ---------------------- #
+        # # ---------------------- #
+        # # weights
+        # # ---------------------- #
 
-        def safe_set(name, val):
-            if name in self.handles:
-                opti.set_value(self.handles[name], val)
+        # def safe_set(name, val):
+        #     if name in self.handles:
+        #         opti.set_value(self.handles[name], val)
 
-        # eef pose weights
+        # # eef pose weights
 
-        safe_set("w_eef_pos_run", self.weights["eef_pos_run"])
-        safe_set("w_eef_att_run", self.weights["eef_att_run"])
+        # safe_set("w_eef_pos_run", self.weights["eef_pos_run"])
+        # safe_set("w_eef_att_run", self.weights["eef_att_run"])
 
-        # control effort weights
+        # # control effort weights
 
-        w_u_vec = np.concatenate((
-            self.weights["w_u_joint"],
-            np.ones(self.ctrl_dim - self.n_joints) * self.weights["w_u_thruster"],
-        ))
-        safe_set("w_u", w_u_vec)
+        # w_u_vec = np.concatenate((
+        #     self.weights["w_u_joint"],
+        #     np.ones(self.ctrl_dim - self.n_joints) * self.weights["w_u_thruster"],
+        # ))
+        # safe_set("w_u", w_u_vec)
 
-        # maniulator infront of vehicle weight
+        # # maniulator infront of vehicle weight
 
-        safe_set("w_manip_joint0", self.weights["w_manip_joint0"])
+        # safe_set("w_manip_joint0", self.weights["w_manip_joint0"])
 
 
         # ---------------------- #
         # warm start 
         # hier ggf nochmal erst die algebraische constraint aufrufen, mit der ich A_GUESS berechne für konsistenz
         # ---------------------- #
+        t0 = time.perf_counter()
 
         U_guess = U_guess.copy()
         X_guess = X_guess.copy()
@@ -454,6 +472,7 @@ class CFTOCSolver:
         )
 
         # warm starts for decision variables
+        t1 = time.perf_counter()
 
         opti.set_initial(U, U_guess)
         opti.set_initial(X, X_guess)
@@ -462,6 +481,8 @@ class CFTOCSolver:
         # Warm start duals if available
         if lam_g_prev is not None:
             opti.set_initial(opti.lam_g, lam_g_prev) 
+
+        t2 = time.perf_counter()
 
 
         # ---------------------- #
@@ -479,14 +500,20 @@ class CFTOCSolver:
         opti.set_value(self.handles["u_star"], u_star)
         opti.set_value(self.handles["a_star"], a_star)
 
+        t3 = time.perf_counter()
+
 
         # ---------------------- #
         # linearization at (x_star, u_star, a_star)
         # ---------------------- #
 
         # state equation + algebraic constraint
+        t4 = time.perf_counter()
 
         x_next, Fx, Fu, Fa, Gx, Gu, Ga = self.lin_disc(x_star, u_star, a_star, self.dt, f_eef_val, l_eef_val)
+
+        t5 = time.perf_counter()
+
 
         opti.set_value(self.handles["Ad"], Fx)
         opti.set_value(self.handles["Bd_u"], Fu)
@@ -498,21 +525,29 @@ class CFTOCSolver:
         opti.set_value(self.handles["Ga"], Ga)
 
         # output equation
+        t6 = time.perf_counter()
 
         y_eef_star, Cd = self.eef_output_lin_disc(x_star)
+        t7 = time.perf_counter()
 
         opti.set_value(self.handles["y_eef_star"], y_eef_star)
         opti.set_value(self.handles["Cd"], Cd)
 
         # constraints
+        t8 = time.perf_counter()
 
         flags = self._compute_activation_flags(x_star)
+        t9 = time.perf_counter()
+
+        t10 = time.perf_counter()
 
         h_nom, Hx, Hu = self.h_linear(x_star, u_star, 1.0, 1.0, 1.0, 1.0, 1.0)
+        t11 = time.perf_counter()
+        t12 = time.perf_counter()
 
         h_nom_flags, Hx_flags, Hu_flags = self.h_linear(x_star, u_star, flags["active_joint"], flags["active_eef_selfcollision"],
                         flags["active_elbow_selfcollision"], flags["active_eef_col"], flags["active_vehicle_col"])
-        
+        t13 = time.perf_counter()
         opti.set_value(self.handles["h_nom"], h_nom)
         opti.set_value(self.handles["Hx"], Hx)
         opti.set_value(self.handles["Hu"], Hu)
@@ -527,13 +562,28 @@ class CFTOCSolver:
         # ---------------------- #
 
         try:
+            t14 = time.perf_counter()
+
             sol = opti.solve()
+            t15 = time.perf_counter()
+
+            t16 = time.perf_counter()
+
             Xv = sol.value(X)
             Uv = sol.value(U)
             Av = sol.value(A)
             Jv = float(sol.value(opti.f))
             lamg = sol.value(opti.lam_g)
-            return Xv, Uv, Av, Jv, lamg, flags
+            t17 = time.perf_counter()
+            print(
+            f"prep={(t1-t0)*1e3:6.2f}ms | init={(t2-t1)*1e3:6.2f}ms | "
+            f"params={(t3-t2)*1e3:6.2f}ms | lin={(t5-t4)*1e3:6.2f}ms | "
+            f"eef={(t7-t6)*1e3:6.2f}ms | flags={(t9-t8)*1e3:6.2f}ms | "
+            f"h_all={(t11-t10)*1e3:6.2f}ms | h_flags={(t13-t12)*1e3:6.2f}ms | "
+            f"solve={(t15-t14)*1e3:6.2f}ms | extract={(t17-t16)*1e3:6.2f}ms"
+            )
+            solve_time = t17-t16
+            return Xv, Uv, Av, Jv, lamg, flags, solve_time
         
         except RuntimeError as e:
             Xv = None
@@ -541,7 +591,8 @@ class CFTOCSolver:
             Av = None
             Jv = np.nan
             lamg = None
-            return Xv, Uv, Av, Jv, lamg, flags
+            solve_time = -1.0
+            return Xv, Uv, Av, Jv, lamg, flags, solve_time
 
     def _build_discrte_linearized_step_func(self, step_fun: ca.Function) -> ca.Function:
         x = ca.MX.sym('x', self.state_dim + self.n_joints)
@@ -560,7 +611,7 @@ class CFTOCSolver:
         Gu = ca.jacobian(res, u)
         Ga = ca.jacobian(res, a)
 
-        return ca.Function("lin_disc_map", [x, u, a, dt, f_eef, l_eef], [x_next, Fx, Fu, Fa, Gx, Gu, Ga]) #.expand()
+        return ca.Function("lin_disc_map", [x, u, a, dt, f_eef, l_eef], [x_next, Fx, Fu, Fa, Gx, Gu, Ga]).expand()
     
     def _build_step_func_augmented(self, f_sys: ca.Function) -> ca.Function:
         dt     = ca.MX.sym('dt')
@@ -707,7 +758,7 @@ class CFTOCSolver:
 
         return ca.Function('eef_output_lin_disc', 
                         [x], 
-                        [y_eef, Cd])#.expand()
+                        [y_eef, Cd]).expand()
 
     def _build_h_constraints_linearized_fun(
             self,
@@ -736,7 +787,7 @@ class CFTOCSolver:
             'h_constraints_linearized',
             [x, u, active_joint, active_eef_selfcollision, active_elbow_selfcollision, active_eef_col, active_vehicle_col],
             [h_nom, Hx, Hu]
-        )
+        ).expand()
     
     def _build_h_constraints_nonlinear_xu_fun(self, eef_pose: ca.Function) -> ca.Function:
         """Build a CasADi Function h(x,u) for the nonlinear inequality constraints."""
