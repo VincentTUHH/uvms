@@ -1,0 +1,44 @@
+/**:
+  ros__parameters:
+    model:
+      mass: 14.5
+      inertia:
+      - 0.25
+      - 0.25
+      - 0.4
+      cog:
+      - 0.0
+      - 0.0
+      - 0.0
+      added_mass:
+      - 10.0
+      - 14.0
+      - 18.0
+      - 0.15
+      - 0.15
+      - 0.2
+      buoyancy: 14.45
+      cob:
+      - 0.0
+      - 0.0
+      - 0.31
+      damping_linear:
+      - 5.0
+      - 6.0
+      - 7.5
+      - 0.25
+      - 0.25
+      - 0.25
+      damping_nonlinear:
+      - 20.0
+      - 20.0
+      - 40.0
+      - 0.5
+      - 0.5
+      - 0.75
+    manipulator_comp:
+      origin:
+        x: 0.086
+        y: 0.0
+        z: -0.109
+      buoyancy_mass: 0.899

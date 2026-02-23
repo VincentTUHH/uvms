@@ -232,7 +232,6 @@ class CFTOCSolver:
             A.append(opti.variable(self.n_dof))
         X.append(opti.variable(self.state_dim + self.n_joints))  # terminal state
 
-
         # eef pose reference trajectory
         ref_eef_pos   = opti.parameter(3, self.n_horizon)
         ref_eef_att   = opti.parameter(4, self.n_horizon)
@@ -327,7 +326,7 @@ class CFTOCSolver:
             # cost function terms
             # --------------------- #
 
-            
+            # vehcile tilt
             v_nu = xk[self.n_joints:self.n_joints + self.n_dof]  # bluerov body velocity
             v_lin_vel = v_nu[0:3]
             v_ang_vel = v_nu[3:6]
@@ -340,7 +339,7 @@ class CFTOCSolver:
             qy = v_att[2]
             qz = v_att[3]
 
-            tilt_ref_deg = 20.0
+            tilt_ref_deg = 5.0
             tilt_ref = ca.sin(ca.pi * tilt_ref_deg / 360.0)**2  # sin^2(25°/2)
 
             tilt_norm = (qx**2 + qy**2) / tilt_ref
@@ -348,6 +347,18 @@ class CFTOCSolver:
 
             cost += w_tilt * tilt_norm
 
+            # vehicle velocities
+            v_lin_vel_norm = v_lin_vel / 0.3
+            cost += v_lin_vel_norm.T @ v_lin_vel_norm
+
+            v_ang_vel_norm = v_ang_vel / 0.5
+            cost += v_ang_vel_norm.T @ v_ang_vel_norm
+
+            # ak_q = uk[:(self.n_joints-1)] / 1000.0
+
+            # aq0 = ak_q[0]
+
+            # cost = ak_q.T @ ak_q
 
 
 
@@ -380,6 +391,9 @@ class CFTOCSolver:
             dev_joint0 = xk[0] - np.pi
 
             cost += w_manip_joint0 * (dev_joint0 / ca.DM(self.cost_scaling["manip_joint0"]))**2
+
+            dev_joint2 = xk[2] - np.pi/2
+            cost += w_manip_joint0 * (dev_joint2 / ca.DM(self.cost_scaling["manip_joint0"]))**2
 
  
         # finalize opti

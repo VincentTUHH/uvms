@@ -84,8 +84,8 @@ COST_SCALING = {
     # normalize EEF position error by tank dimensions so axes contribute equally
     "eef_pos": np.array([0.05, 0.05, 0.05]),                                        # max Fehler bei 10 cm
     "eef_att": np.array([0.0872 , 0.0872, 0.0872]),                                 # max Fehler 10 deg in rad, der fehler ist |err| = sin(theta/2) ~ theta/2 für kleine winkel, dann sin(10°/2) ~ 0.0872
-    "control_effort_thruster": np.array([0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4]),  # max 40% von max PWM
-    "control_effort_joint": np.array([0.6, 0.6, 0.6, 0.9]),                      # max 60% von den max joint velociteis max: [0.7, 0.7, 0.7, 1.0] rad/s
+    "control_effort_thruster": np.array([0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]),  # max 40% von max PWM
+    "control_effort_joint": np.array([0.2, 0.3, 0.7, 0.9]),                      # max 60% von den max joint velociteis max: [0.7, 0.7, 0.7, 1.0] rad/s
     "manip_joint0": np.array([0.485]),                                              # max 45 deg from pi
 }
 
@@ -104,7 +104,7 @@ MPC_LIMITS = {
 
     # Tank boundaries (before deflation)
     "tank_bounds_min": np.array([0.0, 0.0, -1.5]),
-    "tank_bounds_max": np.array([2.0, 4.0, 0.0]),
+    "tank_bounds_max": np.array([2.0, 4.0, 1.0]), # make upper tank bound disappear
     "tank_vehicle_deflation": np.array([0.228, 0.228, 0.228]) + 0.1,  # BlueROV longest side/2 + margin 10cm
     "tank_eef_deflation": 0.1,               # manipulator safety margin 10cm
 }
@@ -126,23 +126,23 @@ THRUST_LIMITS = 1.0
 TRAJ_ARGS = {
     # Select which trajectory generator to use in main_nlp.py.
     # Supported: "line", "circ_oscillation"
-    "type": "circ_oscillation_3d_radial", #"circ_oscillation_3d_radial",
+    "type": "sine_xz", #"circ_oscillation_3d_radial",
 
     # Parameters for a simple minimum-jerk line trajectory
     "line": {
-        "p_start": np.array([1.5, 1.0, -0.75]),
+        "p_start": np.array([1.0, 1.0, -0.75]),
         "q_start": np.array([1.0, 0.0, 0.0, 0.0]),
-        "p_goal":  np.array([1.5, 3.0, -0.75]),
+        "p_goal":  np.array([1.0, 3.0, -0.75]),
         "q_goal":  np.array([1.0, 0.0, 0.0, 0.0]),
         "fwd_speed": 0.2,  # [m/s] desired speed
     },
 
     "sine_xz": {
-        "p_start": np.array([1.5, 1.0, -0.75]),
-        "p_goal":  np.array([1.5, 3.0, -0.75]),
+        "p_start": np.array([1.0, 1.0, -0.75]),
+        "p_goal":  np.array([1.0, 3.0, -0.75]),
         "n_osc":            2,
         "A":                0.2,
-        "fwd_speed":        0.1,  # [m/s] desired speed (see speed_mode in generator)
+        "fwd_speed":        0.2,  # [m/s] desired speed (see speed_mode in generator)
     },
 
     # z-axis tangential to trajectory

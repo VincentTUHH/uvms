@@ -817,7 +817,7 @@ def generate_eef_sine_xz_const_speed(
     ez = v / v_norm_safe  # tangent as z-axis
 
     # Preferred world-x direction based on start x
-    x_pref_sign = 1.0 if p_start[0] >= 1.0 else -1.0
+    x_pref_sign = 1.0 if p_start[0] <= 1.0 else -1.0
     a_world = np.array([x_pref_sign, 0.0, 0.0], dtype=float)
 
     quat_list = []
