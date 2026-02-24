@@ -85,7 +85,7 @@ COST_SCALING = {
     "eef_pos": np.array([0.05, 0.05, 0.05]),                                        # max Fehler bei 10 cm
     "eef_att": np.array([0.0872 , 0.0872, 0.0872]),                                 # max Fehler 10 deg in rad, der fehler ist |err| = sin(theta/2) ~ theta/2 für kleine winkel, dann sin(10°/2) ~ 0.0872
     "control_effort_thruster": np.array([0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]),  # max 40% von max PWM
-    "control_effort_joint": np.array([0.2, 0.3, 0.7, 0.9]),                      # max 60% von den max joint velociteis max: [0.7, 0.7, 0.7, 1.0] rad/s
+    "control_effort_joint": np.array([0.2, 0.3, 0.5, 0.9]),                      # max 60% von den max joint velociteis max: [0.7, 0.7, 0.7, 1.0] rad/s
     "manip_joint0": np.array([0.485]),                                              # max 45 deg from pi
 }
 
@@ -142,7 +142,7 @@ TRAJ_ARGS = {
         "p_goal":  np.array([1.0, 3.0, -0.75]),
         "n_osc":            2,
         "A":                0.2,
-        "fwd_speed":        0.2,  # [m/s] desired speed (see speed_mode in generator)
+        "fwd_speed":        0.1,  # [m/s] desired speed (see speed_mode in generator)
     },
 
     # z-axis tangential to trajectory
@@ -150,10 +150,10 @@ TRAJ_ARGS = {
     "circ_oscillation_3d_radial": {
         "start_pos":        np.array([1.8, 2.0, -0.75]),
         "radius":           0.80,
-        "n_revs":           1.0,
+        "n_revs":           3.0,
         "A_z":              0.2,
         "n_osc_per_circle": 5,
-        "fwd_speed":        0.1,  # [m/s] desired speed (see speed_mode in generator)
+        "fwd_speed":        0.15,  # [m/s] desired speed (see speed_mode in generator)
     },
 
     "hold_pose": {

@@ -348,11 +348,11 @@ class CFTOCSolver:
             cost += w_tilt * tilt_norm
 
             # vehicle velocities
-            v_lin_vel_norm = v_lin_vel / 0.3
-            cost += v_lin_vel_norm.T @ v_lin_vel_norm
+            # v_lin_vel_norm = v_lin_vel / 0.3
+            # cost += v_lin_vel_norm.T @ v_lin_vel_norm
 
-            v_ang_vel_norm = v_ang_vel / 0.5
-            cost += v_ang_vel_norm.T @ v_ang_vel_norm
+            # v_ang_vel_norm = v_ang_vel / 0.5
+            # cost += v_ang_vel_norm.T @ v_ang_vel_norm
 
             # ak_q = uk[:(self.n_joints-1)] / 1000.0
 
