@@ -39,6 +39,18 @@ enum ControllerStatus {
   eef_control = 2
 };
 
+/**
+ * @brief Controls the sequential initialization of the UVMS.
+ *
+ * The controller first moves the AUV to its desired initial pose while holding
+ * the manipulator configuration. It then moves the manipulator joints to their
+ * desired initial configuration.
+ *
+ * Once configuration-space setpoints stop arriving, control is handed over to
+ * the end-effector controller for trajectory tracking. Because the setpoint
+ * subscription remains active, a new initialization sequence can be started
+ * later for another pick-and-place cycle.
+ */
 class UVMSSwitchingKinematicConfigurationControl {
  public:
   UVMSSwitchingKinematicConfigurationControl();

@@ -10,7 +10,7 @@ def generate_launch_description():
         default_value='klopsi00',
         description='used for node namespace'
     )
-    
+
     px4_bridge = launch_ros.actions.Node(package='visual_localization',
                                          executable='px4_bridge',
                                          namespace=vehicle_name,

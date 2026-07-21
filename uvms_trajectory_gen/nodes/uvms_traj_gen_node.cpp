@@ -106,6 +106,41 @@ void UVMSTrajGen::sendSetpoint() {
       initial_startup_.sendSetpoint();
       return;
     case TrajStatus::reached_initial_pose: {
+      if (!initial_handover_complete_) {
+        if (!initial_handover_started_) {
+          initial_handover_started_ = true;
+          start_time_ = this->now();
+        }
+
+        out_msg_.header.stamp = this->now();
+        out_msg_.header.frame_id =
+            hippo_common::tf2_utils::frame_id::kInertialName;
+        hippo_common::convert::EigenToRos(pos_, out_msg_.position);
+        hippo_common::convert::EigenToRos(Eigen::Vector3d::Zero(),
+                                          out_msg_.velocity);
+        hippo_common::convert::EigenToRos(Eigen::Vector3d::Zero(),
+                                          out_msg_.acceleration);
+        hippo_common::convert::EigenToRos(att_, out_msg_.attitude);
+        hippo_common::convert::EigenToRos(Eigen::Vector3d::Zero(),
+                                          out_msg_.angular_velocity);
+        hippo_common::convert::EigenToRos(Eigen::Vector3d::Zero(),
+                                          out_msg_.angular_acceleration);
+        out_msg_.mask = 0;
+
+        if (publish_prediction_) {
+          out_msg_prediction_.header = out_msg_.header;
+          out_msg_prediction_.target = out_msg_;
+          out_msg_prediction_.target_forward = out_msg_;
+          out_msg_prediction_.dt = 1.0 / freq_;
+        }
+
+        if ((this->now() - start_time_).seconds() <
+            initial_handover_duration_) {
+          break;
+        }
+        initial_handover_complete_ = true;
+      }
+
       EefTrajSetpoint setpoint;
       traj_gen_->getSetpoint(0.0, setpoint);
       start_traj_.initializeFromVelocityLimits(

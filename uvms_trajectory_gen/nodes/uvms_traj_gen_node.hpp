@@ -37,11 +37,19 @@ using param_utils::link_names;
 using param_utils::StateVector;
 namespace uvms_traj_gen {
 
-//! This class generates endeffector trajectories in the inertial coordinate
-//! system, meaning that position, velocity and acceleration as well as angular
-//! velocity and acceleration vectors are represented in the inertial coordinate
-//! system. Attitude describes rotation between inertial coordinate system and
-//! body coordinate system
+/**
+ * @brief Generates the approach and reference trajectories for end-effector
+ * tracking in the inertial frame, meaning that position, velocity and acceleration
+ * as well as angular velocity and acceleration vectors are represented in the
+ * inertial coordinate system. Attitude describes rotation between inertial
+ * coordinate system and body coordinate system.
+ *
+ * After the shared configuration-space startup is complete, the node generates
+ * an end-effector trajectory from the current pose to the initial pose of the
+ * selected reference trajectory. Once that pose is reached, it publishes the
+ * configured reference trajectory and repeats it for the requested number of
+ * runs.
+ */
 class UVMSTrajGen : public rclcpp::Node {
  public:
   UVMSTrajGen();
@@ -78,6 +86,7 @@ class UVMSTrajGen : public rclcpp::Node {
   double w_max_init_;
   double start_accuracy_;
   double freq_ = 50;  // Hz
+  double initial_handover_duration_ = 0.5;  // s
 
   int n_runs_;
   int run_counter_ = 0;
@@ -87,6 +96,8 @@ class UVMSTrajGen : public rclcpp::Node {
   bool publish_prediction_ = false;
 
   bool first_state_ = false;
+  bool initial_handover_started_ = false;
+  bool initial_handover_complete_ = false;
 
   int traj_status_ = TrajStatus::undeclared;
 

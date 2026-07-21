@@ -201,6 +201,7 @@ def generate_launch_description():
             bluerov_mixer,
             uvms_kinematic_ctrl,
             # estimation_drift_watchdog,
+            uvms_trajectory_gen,
             state_publisher,
             tf_publisher_vehicle,
             uvms_visualization,

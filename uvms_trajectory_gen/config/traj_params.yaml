@@ -21,7 +21,7 @@
       start_pos: [ 1.0, 2.0, -0.7 ] #[ 1.0, 1.4, -0.7 ] #[ 1.0, 2.0, -0.7 ] #[ 0.6, 2.0, -0.7 ] #
       # left/right: [ 1.0, 1.4, -0.7 ]
       # behind: [ 1.0, 1.4, -0.7 ]
-      start_att: [ 0.0, 0.0, 0.5 ]  # [0.0, 0.0, 0.0]  # attitude rpy, afterwards multiplied by pi in [rad]
+      start_att: [ 0.0, 0.0, 0.0 ]  # [0.0, 0.0, 0.5]  # attitude rpy, afterwards multiplied by pi in [rad]
       # front: [ 0.0, 0.0, 0.5 ], behind: [ 0.0, 0.0, -0.5 ]
       # left: [ 0.0, 0.0, 0.0 ], right: [ 0.0, 0.0, 1.0 ]
       start_joints: [1.0, 0.25, 0.5, 1.5] # [0.0, 0.6, 0.2, 1.2] #[1.0, 0.25, 0.5, 1.5] #[1.0, 0.5, 0.75, 0.5] #[0.4, 0.95, 0.45, 0.67] #[0.5, 0.95, 0.45, 0.67] #[1.0, 0.5, 0.75, 0.5] #[0.3, 0.8, 0.3, 0.6666] # states are post-multiplied by PI => in rad / pi ' beer holder [1.0, 0.1, 0.7, 1.5]
