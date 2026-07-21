@@ -33,11 +33,20 @@ using std::placeholders::_1;
 using namespace std::chrono;
 namespace uvms_traj_gen {
 
-//! This class generates endeffector trajectories in the inertial coordinate
-//! system, meaning that position, velocity and acceleration as well as angular
-//! velocity and acceleration vectors are represented in the inertial coordinate
-//! system. Attitude describes rotation between inertial coordinate system and
-//! body coordinate system
+/**
+ * @brief Generates planner-requested pick-and-place trajectories for the end
+ * effector in the inertial frame, meaning that position, velocity and acceleration
+ * as well as angular velocity and acceleration vectors are represented in the
+ * inertial coordinate system. Attitude describes rotation between inertial
+ * coordinate system and body coordinate system.
+ *
+ * After the shared configuration-space startup, the node does not move to the
+ * initial pose of a predefined reference trajectory. Instead, it waits for a
+ * numbered goal pose from the planner and generates a straight-line,
+ * minimum-jerk quintic polynomial trajectory from the current end-effector pose
+ * to that goal. Once the goal is reached, it waits for the next planner command /
+ * goal pose.
+ */
 class UVMSTrajGenPickPlace : public rclcpp::Node {
  public:
   UVMSTrajGenPickPlace();

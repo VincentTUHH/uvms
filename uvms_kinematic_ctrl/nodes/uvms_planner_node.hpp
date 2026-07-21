@@ -52,6 +52,17 @@ enum PlannerMode {
   read_new_cylinder = 15,
 };
 
+/**
+ * @brief Runs the state machine for a step-by-step UVMS pick-and-place task.
+ *
+ * The planner uses object, platform, cylinder-holder, and end-effector poses to
+ * determine the successive approach, gripping, lifting, placement, release,
+ * and retreat goals. It coordinates each step by sending numbered end-effector
+ * goals and control modes to the trajectory generator, commanding the gripper,
+ * and waiting for the corresponding trajectory and gripper status before
+ * advancing the state machine. A service enables or disables the complete
+ * pick-and-place test sequence.
+ */
 class UVMSPlannerNode : public rclcpp::Node {
  public:
   UVMSPlannerNode();

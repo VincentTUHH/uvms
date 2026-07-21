@@ -40,6 +40,25 @@
 namespace uvms_kin_ctrl {
 using std::placeholders::_1;
 
+/**
+ * @brief Switches between startup positioning and end-effector trajectory tracking.
+ *
+ * During startup, configuration-space control first moves the AUV to its desired
+ * initial pose and then moves the manipulator to its desired joint configuration.
+ * This establishes the initial UVMS configuration for the pick-and-place task.
+ *
+ * After the startup setpoints time out, the node switches to end-effector control,
+ * which tracks the desired end-effector trajectory during the manipulation phase.
+ *
+ * Unlike the non-switching controller, this node keeps the startup controller
+ * connected. A new configuration-space setpoint can therefore restart the
+ * initialization sequence, allowing repeated pick-and-place cycles without
+ * restarting the node.
+ *
+ * The switching changes only the active control mode, not the underlying
+ * kinematic control laws.
+ */
+
 class UVMSSwitchingKinematicControlNode : public rclcpp::Node {
  public:
   UVMSSwitchingKinematicControlNode();
