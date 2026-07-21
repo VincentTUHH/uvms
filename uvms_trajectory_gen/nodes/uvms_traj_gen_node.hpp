@@ -86,6 +86,7 @@ class UVMSTrajGen : public rclcpp::Node {
   double w_max_init_;
   double start_accuracy_;
   double freq_ = 50;  // Hz
+  double initial_handover_duration_ = 0.5;  // s
 
   int n_runs_;
   int run_counter_ = 0;
@@ -95,6 +96,8 @@ class UVMSTrajGen : public rclcpp::Node {
   bool publish_prediction_ = false;
 
   bool first_state_ = false;
+  bool initial_handover_started_ = false;
+  bool initial_handover_complete_ = false;
 
   int traj_status_ = TrajStatus::undeclared;
 
