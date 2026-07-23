@@ -41,13 +41,7 @@ find_package(bluerov_ctrl REQUIRED)
 find_package(uvms_trajectory_gen REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
 find_package(std_srvs REQUIRED)
-
-rosidl_generate_interfaces(${PROJECT_NAME}
-        "msg/VectorError.msg"
-        DEPENDENCIES geometry_msgs std_msgs
-)
 
 add_library(kin_ctrl
         src/kinematics.cpp
@@ -156,10 +150,6 @@ ament_target_dependencies(pap_evaluation_node
         nav_msgs
         std_msgs
         hippo_common)
-
-rosidl_get_typesupport_target(cpp_typesupport_target
-        ${PROJECT_NAME} rosidl_typesupport_cpp)
-target_link_libraries(pap_evaluation_node "${cpp_typesupport_target}")
 
 # ########
 # target_include_directories(uvms_planner_node PUBLIC

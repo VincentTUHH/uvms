@@ -26,8 +26,8 @@
 #include <std_msgs/msg/int64.hpp>
 #include "hippo_msgs/msg/int64_stamped.hpp"
 #include "hippo_msgs/msg/float64_stamped.hpp"
+#include "hippo_msgs/msg/vector_error.hpp"
 #include "hippo_control_msgs/msg/control_target.hpp"
-#include "uvms_kinematic_ctrl/msg/vector_error.hpp"
 
 #include "hippo_common/convert.hpp"
 
@@ -86,9 +86,9 @@ class PaPEvaluationNode : public rclcpp::Node {
     hippo_msgs::msg::Int64Stamped msg_SM_change_;
     hippo_msgs::msg::Float64Stamped msg_eef_pos_err_;
     hippo_msgs::msg::Float64Stamped msg_eef_att_err_;
-    uvms_kinematic_ctrl::msg::VectorError msg_placed_pos_;
-    uvms_kinematic_ctrl::msg::VectorError msg_gripped_pos_;
-    uvms_kinematic_ctrl::msg::VectorError msg_gripped_angle_;
+    hippo_msgs::msg::VectorError msg_placed_pos_;
+    hippo_msgs::msg::VectorError msg_gripped_pos_;
+    hippo_msgs::msg::VectorError msg_gripped_angle_;
     hippo_msgs::msg::Int64Stamped msg_traj_status_;
 
     //R_eef^(eef,perpendicular), where eef is the frame in pose_endeffector topic
@@ -132,9 +132,9 @@ class PaPEvaluationNode : public rclcpp::Node {
     rclcpp::Publisher<hippo_msgs::msg::Float64Stamped>::SharedPtr eef_pos_error_pub_;
     rclcpp::Publisher<hippo_msgs::msg::Float64Stamped>::SharedPtr eef_att_error_pub_;
 
-    rclcpp::Publisher<uvms_kinematic_ctrl::msg::VectorError>::SharedPtr placed_pos_pub_;
-    rclcpp::Publisher<uvms_kinematic_ctrl::msg::VectorError>::SharedPtr gripped_pos_pub_;
-    rclcpp::Publisher<uvms_kinematic_ctrl::msg::VectorError>::SharedPtr gripped_angle_pub_;
+    rclcpp::Publisher<hippo_msgs::msg::VectorError>::SharedPtr placed_pos_pub_;
+    rclcpp::Publisher<hippo_msgs::msg::VectorError>::SharedPtr gripped_pos_pub_;
+    rclcpp::Publisher<hippo_msgs::msg::VectorError>::SharedPtr gripped_angle_pub_;
 
     rclcpp::Publisher<hippo_msgs::msg::Int64Stamped>::SharedPtr traj_status_stamped_pub_;
 

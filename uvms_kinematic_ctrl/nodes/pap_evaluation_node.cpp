@@ -65,15 +65,15 @@ void PaPEvaluationNode::initPublishers() {
 
     topic = "~/placed_pos_and_error";
     placed_pos_pub_ =
-        create_publisher<uvms_kinematic_ctrl::msg::VectorError>(topic, qos);
+        create_publisher<hippo_msgs::msg::VectorError>(topic, qos);
 
     topic = "~/gripped_pos_and_error";
     gripped_pos_pub_ =
-        create_publisher<uvms_kinematic_ctrl::msg::VectorError>(topic, qos);
+        create_publisher<hippo_msgs::msg::VectorError>(topic, qos);
 
     topic = "~/gripped_angle_and_error";
     gripped_angle_pub_ =
-        create_publisher<uvms_kinematic_ctrl::msg::VectorError>(topic, qos);
+        create_publisher<hippo_msgs::msg::VectorError>(topic, qos);
 
     topic = "~/traj_status_stamped";
     traj_status_stamped_pub_ =
