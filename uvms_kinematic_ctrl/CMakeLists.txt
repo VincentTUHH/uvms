@@ -41,7 +41,13 @@ find_package(bluerov_ctrl REQUIRED)
 find_package(uvms_trajectory_gen REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 find_package(std_srvs REQUIRED)
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+        "msg/VectorError.msg"
+        DEPENDENCIES geometry_msgs std_msgs
+)
 
 add_library(kin_ctrl
         src/kinematics.cpp
@@ -138,6 +144,23 @@ ament_target_dependencies(uvms_planner_node
         std_srvs
         )
 
+add_executable(pap_evaluation_node
+        nodes/pap_evaluation_node.cpp)
+
+ament_target_dependencies(pap_evaluation_node
+        rclcpp
+        Eigen3
+        geometry_msgs
+        hippo_msgs
+        hippo_control_msgs
+        nav_msgs
+        std_msgs
+        hippo_common)
+
+rosidl_get_typesupport_target(cpp_typesupport_target
+        ${PROJECT_NAME} rosidl_typesupport_cpp)
+target_link_libraries(pap_evaluation_node "${cpp_typesupport_target}")
+
 # ########
 # target_include_directories(uvms_planner_node PUBLIC
 #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -162,7 +185,7 @@ install(
         DESTINATION share/${PROJECT_NAME}
 )
 
-install(TARGETS uvms_kin_ctrl_node uvms_switching_kin_ctrl_node estimation_drift_watchdog_node uvms_planner_node
+install(TARGETS uvms_kin_ctrl_node uvms_switching_kin_ctrl_node estimation_drift_watchdog_node uvms_planner_node pap_evaluation_node
         DESTINATION lib/${PROJECT_NAME})
 
 # for testing:
