@@ -93,10 +93,9 @@ void UVMSTrajGenStartUp::initializeParameters(bool output) {
 
   std::vector<double> start_q;
   if (!ros_param_utils::getParamArray(
-          node_ptr_, start_q, "startup.start_joints", {1.0, 0.5, 0.5, 1.0} )) {
+          node_ptr_, start_q, "startup.start_joints", {1.0, 0.5, 0.5, 1.0})) {
     RCLCPP_ERROR(node_ptr_->get_logger(),
                  "Param startup.start_joints not set!");
-
     return;
   }
   if (start_q.size() != param_utils::n_active_joints) {
@@ -161,7 +160,7 @@ void UVMSTrajGenStartUp::sendSetpoint() {
     initial_manipulator_traj_.getSetpoint(t, manipulator_setpoint_.q,
                                           manipulator_setpoint_.dq,
                                           manipulator_setpoint_.ddq);
-  } else { //
+  } else {
     manipulator_setpoint_.q = q_;
     manipulator_setpoint_.dq.setZero();
     manipulator_setpoint_.ddq.setZero();

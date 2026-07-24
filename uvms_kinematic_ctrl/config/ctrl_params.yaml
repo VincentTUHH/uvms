@@ -73,7 +73,7 @@
       q_max:
         q0: 6.02
         q1: 3.40339
-        q2: 3.2 # lowered to avoid local minimum between joint limit and manipulability
+        q2: 3.2  # lowered to avoid local minimum between joint limit and manipulability
         q3: 10000000.0
       gain:
         q0: 1.0
@@ -81,7 +81,7 @@
         q2: 1.0
         q3: 1.0
       safety: 0.2  # relative limit which should not be exceeded!
-      delta: 0.2 # offset from which on the controller will actively push the joint position away from the limits
+      delta: 0.2  # offset from which on the controller will actively push the joint position away from the limits
       alpha: 0.1 # offset added to delta that must be passed to deactivate the task once it is activated
 
     joint_limits_desired:
@@ -215,4 +215,3 @@
       #    q1: 0.02
       #    q2: 0.02
       #    q3: 0.02
-
