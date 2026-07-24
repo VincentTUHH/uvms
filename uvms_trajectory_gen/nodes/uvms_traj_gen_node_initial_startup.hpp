@@ -51,6 +51,17 @@ struct ManipulatorTrajSetpoint {
   StateVector ddq;
 };
 
+/**
+ * @brief Generates the sequential startup trajectories for the UVMS
+ * configuration-space controller.
+ *
+ * The generator first creates a velocity-limited point-to-point trajectory for
+ * the AUV pose while holding the manipulator at its current configuration. Once
+ * the AUV reaches its target, it creates a velocity-limited joint-space
+ * trajectory to the desired manipulator configuration while holding the AUV at
+ * its target pose. The combined AUV and manipulator setpoints are published on
+ * `traj_setpoint_uvms` for the configuration-space controller.
+ */
 class UVMSTrajGenStartUp {
  public:
   UVMSTrajGenStartUp() {};
@@ -65,6 +76,8 @@ class UVMSTrajGenStartUp {
   void resetConnections();
   void sendSetpoint();
   void initialize(rclcpp::Node* node_ptr);
+
+  void resetAUVState();
 
  private:
   void initializeParameters(bool output);
@@ -105,6 +118,8 @@ class UVMSTrajGenStartUp {
   bool first_manipulator_state_ = false;
   bool finished_ = false;  //!< decides if startup sequence is finished
   int* status_ptr_;
+
+  bool already_initialized_ = false;
 };
 
 }  // namespace uvms_traj_gen

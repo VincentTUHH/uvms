@@ -106,6 +106,41 @@ void UVMSTrajGen::sendSetpoint() {
       initial_startup_.sendSetpoint();
       return;
     case TrajStatus::reached_initial_pose: {
+      if (!initial_handover_complete_) {
+        if (!initial_handover_started_) {
+          initial_handover_started_ = true;
+          start_time_ = this->now();
+        }
+
+        out_msg_.header.stamp = this->now();
+        out_msg_.header.frame_id =
+            hippo_common::tf2_utils::frame_id::kInertialName;
+        hippo_common::convert::EigenToRos(pos_, out_msg_.position);
+        hippo_common::convert::EigenToRos(Eigen::Vector3d::Zero(),
+                                          out_msg_.velocity);
+        hippo_common::convert::EigenToRos(Eigen::Vector3d::Zero(),
+                                          out_msg_.acceleration);
+        hippo_common::convert::EigenToRos(att_, out_msg_.attitude);
+        hippo_common::convert::EigenToRos(Eigen::Vector3d::Zero(),
+                                          out_msg_.angular_velocity);
+        hippo_common::convert::EigenToRos(Eigen::Vector3d::Zero(),
+                                          out_msg_.angular_acceleration);
+        out_msg_.mask = 0;
+
+        if (publish_prediction_) {
+          out_msg_prediction_.header = out_msg_.header;
+          out_msg_prediction_.target = out_msg_;
+          out_msg_prediction_.target_forward = out_msg_;
+          out_msg_prediction_.dt = 1.0 / freq_;
+        }
+
+        if ((this->now() - start_time_).seconds() <
+            initial_handover_duration_) {
+          break;
+        }
+        initial_handover_complete_ = true;
+      }
+
       EefTrajSetpoint setpoint;
       traj_gen_->getSetpoint(0.0, setpoint);
       start_traj_.initializeFromVelocityLimits(
@@ -128,21 +163,16 @@ void UVMSTrajGen::sendSetpoint() {
       // calculate quaternion error:
       Eigen::Matrix3d att_start_tilde;
       skew(att_start.vec(), att_start_tilde);
-
-      Eigen::Vector3d att_error = att_.w() * att_start.vec() -
+      Eigen::Vector3d att_error = att_.w() * att_start.vec() - 
                                   att_start.w() * att_.vec() -
                                   att_start_tilde * att_.vec();
 
-      // RCLCPP_INFO(this->get_logger(), "%s", ("Distance to start point: " +
-      // std::to_string((pos_start-pos_).norm())).c_str());
-      // RCLCPP_INFO(this->get_logger(), "%s", ("Attitude error to start point:
-      // " + std::to_string(att_error.norm())).c_str());
       double dt = (this->now() - start_time_).seconds();
       start_traj_.getPositionSetpoint(dt, setpoint.pos, setpoint.vel,
                                       setpoint.acc);
       start_traj_.getOrientationSetpoint(dt, setpoint.att, setpoint.ang_vel,
                                          setpoint.ang_acc);
-      if ((pos_start - pos_).norm() < start_accuracy_ &&
+      if ((pos_start - pos_).norm() < start_accuracy_ && //check, if eef reached initial start position and orientation/attitude of the trajectory
           att_error.norm() < start_accuracy_) {
         start_time_ = this->now();
         traj_status_ = TrajStatus::reached_initial_eef_pose;

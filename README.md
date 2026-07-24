@@ -41,6 +41,9 @@ This framework can also be used for pick-and-place tasks underwater.
 
 **Video:** https://youtu.be/RGsInnwlMCQ
 
+### Pick-and-Place Testbench
+The CAD files required to reproduce the experimental testbench are provided in [`testbench_construction/`](testbench_construction/).
+
 # Installation
 
 Installation instructions for Linux (Ubuntu 24.04, ROS2 Jazzy)
@@ -67,8 +70,6 @@ Finally, get this repository (e.g. via SSH)
 git clone git@github.com:HippoCampusRobotics/uvms.git
 ```
 
-**Currently tested: please use the jazzy branch!**
-
 Build & source the workspace.
 
 
@@ -84,7 +85,7 @@ Unfortunately, for now, we do not have a better solution to this problem.
 # Starting the simulation
 
 
-### UVMS
+### UVMS Trajectory Tracking
 
 In order to start the simulation with the full UVMS, run:
 ```
@@ -92,7 +93,7 @@ ros2 launch uvms_sim uvms_sim.launch.py vehicle_name:=klopsi00
 ```
 The control framework can then be started using:
 ```
-ros2 launch uvms_kinematic_ctrl top_uvms_sim_complete.launch.py vehicle_name:=klopsi00
+ros2 launch uvms_kinematic_ctrl top_uvms_sim_complete.launch.py
 ```
 
 ### BlueROV
@@ -104,3 +105,39 @@ The control framework can then be started using:
 ```
 ros2 launch bluerov_ctrl top_bluerov_sim_complete.launch.py vehicle_name:=klopsi00
 ```
+
+### UVMS Pick-and-Place
+
+Start the simulation:
+```
+ros2 launch uvms_sim uvms_sim.launch.py vehicle_name:=klopsi00
+```
+
+In a second terminal, start the pick-and-place control framework:
+```
+ros2 launch uvms_kinematic_ctrl top_uvms_pap_sim_complete.launch.py
+```
+
+Start the experiment with:
+```
+ros2 service call /klopsi00/pap_test_start std_srvs/srv/SetBool 'data: true'
+```
+
+#### Manual Simulation Inputs
+
+The simulation does not currently model gripper actuation. The object, holder, and platform poses, as well as the gripper status, must therefore be published manually:
+
+1. Run `rqt` and select **Plugins → Topics → Message Publisher**.
+2. Add the following topics, (refresh the topic list after starting the simulation if necessary):
+   - `/cylinder/ground_truth/odometry` (publish at 1 Hz)
+   - `/cylinder_holder/ground_truth/odometry` (publish at 1 Hz)
+   - `/platform/ground_truth/odometry` (publish at 1 Hz)
+   - `/klopsi00/gripper_status` (publish at 50 Hz)
+3. For each odometry message, set:
+   - `header/stamp/sec`: `int(time())`
+   - `header/stamp/nanosec`: `(time()-int(time()))*1e9`
+   - `header/frame_id`: `'world'`
+   - `child_frame_id`: `''`
+   - `pose/pose/position` and `pose/pose/orientation`: the desired pose for cylinder, holder and platform
+4. Set the gripper status to `0` (closed), `1` (open), or `2` (object grasped). Update this value manually as required by the pick-and-place state machine.
+5. Enable each publisher using the checkbox next to its topic name. The published frames can be inspected in RViz.

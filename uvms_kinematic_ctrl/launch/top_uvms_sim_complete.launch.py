@@ -19,6 +19,8 @@ def generate_launch_description():
         / ('config/actuator_mixer_bluerov_advanced.yaml')
     )
 
+    alpha_ctrl_path = get_package_share_path('alpha_ctrl')
+
     uvms_kin_ctrl_path = get_package_share_path('uvms_kinematic_ctrl')
     estimation_watchdog_path = str(
         uvms_kin_ctrl_path / 'launch/node_estimation_drift_watchdog.launch.py'
@@ -145,6 +147,14 @@ def generate_launch_description():
         launch_arguments={'use_sim_time': str(use_sim_time)}.items(),
     )
 
+    velocity_command = launch.actions.IncludeLaunchDescription(
+        launch.launch_description_sources.PythonLaunchDescriptionSource(
+            str(alpha_ctrl_path / 'launch/velocity_command.launch.py')),
+        launch_arguments={
+            'vehicle_name': vehicle_name,
+            'use_sim_time': str(use_sim_time)}.items()
+    )
+
     return launch.LaunchDescription(
         [
             alpha_estimation,
@@ -157,5 +167,6 @@ def generate_launch_description():
             uvms_trajectory_gen,
             uvms_visualization,
             rviz,
+            velocity_command,
         ]
     )
